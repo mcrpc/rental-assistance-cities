@@ -7,6 +7,13 @@ output:
     code_folding: show
 ---
 
+
+The analysis presented here appears in this blog post:
+
+[Rental Assistance Need in Five of New York’s Mid-Sized Cities](https://furmancenter.org/thestoop/entry/rental-assistance-need-in-five-of-new-yorks-mid-sized-cities)
+
+The dataset prepared here is used in this [separate analysis](https://FurmanCenter.github.io/rental-assistance-cities/analysis_moe-no_rep-100.html).
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
 	echo = TRUE,

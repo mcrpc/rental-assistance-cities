@@ -9,7 +9,3 @@ The analysis presented here appears in this blog post:
 [Details on data preparation](https://FurmanCenter.github.io/rental-assistance-cities/prep-data.html) 
 
 [Details on analysis and results](https://FurmanCenter.github.io/rental-assistance-cities/analysis_moe-no_rep-100.html)
-
---- 
-
-[All source code](https://github.com/FurmanCenter/rental-assistance-cities)

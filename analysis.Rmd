@@ -10,9 +10,12 @@ params:
   iterations: 2
 ---
 
-This analysis is presented in the blog post [TITLE TK]().
+The analysis presented here appears in this blog post:
 
-For details on the preparation of the data see [RENDERED DATA PREP]().
+[Rental Assistance Need in Five of New York’s Mid-Sized Cities](https://furmancenter.org/thestoop/entry/rental-assistance-need-in-five-of-new-yorks-mid-sized-cities)
+
+The dataset used here is [prepared separately](https://FurmanCenter.github.io/rental-assistance-cities/prep-data.html).
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
