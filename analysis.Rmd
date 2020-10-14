@@ -1,0 +1,999 @@
+---
+title: "Covid Rental Assistance Need"
+subtitle: "NYU Furman Center"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+params:
+  hide_moe: FALSE
+  iterations: 2
+---
+
+This analysis is presented in the blog post [TITLE TK]().
+
+For details on the preparation of the data see [RENDERED DATA PREP]().
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+```{r install-packages, eval=FALSE}
+# Install required packages 
+
+pkgs <- c(
+  "tidyverse",
+  "hrbrthemes",
+  "rmarkdown",
+  "jsonlite",
+  "remotes",
+  "srvyr",
+  "knitr",
+  "furrr",
+  "gt",
+  "fs",
+)
+
+install.packages(pkgs)
+remotes::install_github("mikeasilva/blsAPI")
+```
+
+
+```{r load-packages-set-options}
+library(tidyverse) # general data manipulation and graphing
+library(scales) # number formatting
+library(srvyr) # survey functions
+library(gt) # making tables
+library(furrr) # parallel processing
+
+# Load custom theme function to help with plotting
+source("R/plot-helpers.R")
+
+# No scientific notation in outputs
+options(scipen = 999)
+
+# To deal with the random assignment of job loss and UI takeup for individuals,
+# we need to run generate the results multiple times with different random seeds
+# and then average the results. To speed this up we use {furrr} to run this in
+# parallel across multiple cores.
+plan(multiprocess)
+```
+
+
+```{r load-ipums-clean}
+ipums_clean <- read_rds("data/ipums_clean.rds")
+```
+
+
+### Repeated Iterations of Analysis
+
+```{r set-iterations}
+# Number of iterations to run when compiling results
+ITERATIONS <- as.integer(params$iterations)
+
+# We manage the random number generator seed directly, so we can ignore warnings from the package that handles the parallelization 
+options(future.rng.onMisuse = "ignore")
+```
+
+In our analysis we randomly assign individuals in the data to job loss status and UI recipiency with probabilities based on the industry-specific job loss rates and the UI benefit recipiency rate. To ensure that our final results are not unduly influenced by random variation in those assignment, we repeat the analysis `r comma(ITERATIONS)` times and average the results.
+
+
+### Unemployment Insurance Recipiency Rate
+
+```{r ui-takeup-rate}
+# Assumption about % of people who lost jobs that will receive UI benefits
+UI_TAKEUP_RATE <- 0.67
+```
+
+Not every person who losses their job will receive unemployment insurance. The reasons for this include:  
+
+* income eligibility  
+* employment type eligibility  
+* immigration status  
+* administrative burden  
+* never applying  
+
+While we can test for income eligibility in the data, we have to rely on this assumption about overall take up rate to account the other factors in our analysis.
+
+For this analysis we are following the work from [The Century Foundation](https://tcf.org/content/commentary/covid-stimulus-3-0-ui-reaction) and using a UI recipiency rate of `r percent(UI_TAKEUP_RATE)` for New York State.
+
+
+### Analysis Functions
+
+There are two functions that add UI takeup and rental assistance need variables to the clean IPUMS dataset. These are part of the steps that are repeated for many iterations of the simulations. 
+
+```{r source-add-ui-and-need-vars}
+source("R/add-ui-and-need-vars.R")
+```
+
+
+This function takes a dataframe as created by the above `add_risk_vars()` function that has then been filtered to only one row per household (eg. `filter(pernum == 1)`), and summarizes the household level variables (using survey weights) of interest for a single month. 
+
+```{r survey-helpers}
+# Preset some arguments for cleaner code below
+survey_total_ci90 <- partial(survey_total, vartype = "ci", level = 0.90)
+survey_mean_ci90 <- partial(survey_mean, vartype = "ci", level = 0.90)
+```
+
+
+```{r city-order}
+city_order <- c(
+  "Albany", "Buffalo", "Rochester", "Syracuse", "Yonkers",
+  "Total"
+)
+```
+
+```{r add-moe-helper}
+# When using the {srvyr} package we get separate columns for the lower and
+# upper bounds of the confidence interval. This little helper function creates
+# a single margin of error column.
+add_moe <- function(.data) {
+  .data %>%
+  pivot_longer(is.numeric) %>% 
+  mutate(
+    value_type = case_when(
+      str_detect(name, "_low") ~ "low",
+      str_detect(name, "_upp") ~ "upp",
+      TRUE ~ "est"
+    ),
+    name = str_remove(name, "(_low|_upp)")
+  ) %>% 
+  pivot_wider(names_from = value_type, values_from = value) %>% 
+  mutate(moe_90 = upp - est) %>% 
+  select(-low, -upp) %>% 
+  pivot_longer(is.numeric, names_to = "value_type") %>% 
+  unite(name_type, name, value_type) %>% 
+  pivot_wider(names_from = name_type, values_from = value)
+}
+```
+
+### Table making helpers
+
+We create a lot of different tables to display our results, and there are a few common tasks we need to do with them all so it's helpful to separate this code out into small functions to use in each table. 
+
+It's useful to have MOE columns in the tables when drafting the write up, but for displaying the final tables it is overwhelming to have so many numbers so we also want to have versions with the MOEs hidden. We've used R Markdown's "parameters" feature to make it easy to render the document with or without MOE columns.
+
+```{r}
+# Hide margin of error columns in tables?
+HIDE_MOE <- as.logical(params$hide_moe)
+```
+
+```{r hide-cols-list-helper}
+# Annoyingly, you can't hide the col labels and have spanners, so we just make a
+# list of all the column names and set the label to "" and plug this into
+# cols_label(.list = hide_cls_list(.data))
+hide_cols_list <- function(.data) {
+  .data %>% 
+  select(is.numeric) %>% 
+  names() %>% 
+  {set_names(rep("", length(.)), .)} %>% 
+  as.list()
+}
+```
+
+```{r hide-moe-cols-helper}
+# {gt} has a useful function for hiding columns, so we just make a little
+# helper so we can show/hide based on a boolean defined above.
+
+hide_moe_cols <- function(.data, hide_moe = FALSE) {
+  if (hide_moe) {
+    cols_hide(.data, ends_with("_moe_90"))
+  } else {
+    .data
+  }
+}
+```
+
+```{r}
+# For each table we include a total row and so it's helpful to style it
+# differently for readability.
+highlight_total <- function(.data) {
+  .data %>% 
+    tab_style(
+      style = cell_fill(color = "#D3D3D3"), 
+      locations = list(
+        cells_stub(rows = matches("Total")),
+        cells_body(rows = city == "Total")
+      )
+    )
+}
+```
+
+## Results
+
+
+```{r household-data}
+# Data prep for Tables 1-2
+household_summarise_stats <- function(.data) {
+  .data %>%  
+    filter(
+      pernum == 1, # keep only one row per household
+      hh_any_risk  # keep only vulnerable households
+    ) %>% 
+    as_survey_design(weights = hhwt) %>% 
+    group_by(city) %>%
+    summarise(
+      renter_households = survey_total_ci90(1),
+      lost_wages_agg_monthly = survey_total_ci90(hh_risk_wages/12),
+      ui_benefits_reg_agg_monthly = survey_total_ci90(hh_ui_benefits_month_reg),
+      ui_benefits_extra300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_extra300),
+      ui_benefits_all300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_all300),
+      rent_monthly_tot = survey_total_ci90(gross_rent_nom, na.rm = TRUE),
+      rent_monthly_avg = survey_mean_ci90(gross_rent_nom, na.rm = TRUE)
+    ) %>% 
+    ungroup()
+}
+
+ui_percent_stats <- function(.data) {
+  .data %>% 
+    filter(
+      pernum == 1, # keep only one row per household
+      # Keep all renter households, not just ones with income loss
+    ) %>% 
+    as_survey_design(weights = hhwt) %>% 
+    group_by(city) %>% 
+    summarise(
+      renter_hh_ui_pct = survey_mean_ci90(hh_any_risk & hh_ui_benefits_month_reg > 0),
+      renter_hh_noui_pct = survey_mean_ci90(!is.na(hh_any_risk) & hh_any_risk & hh_ui_benefits_month_reg == 0)
+    )
+}
+
+prep_household_data <- function(seed, .data) {
+  set.seed(seed)
+  
+  data_w_need <- .data %>% 
+    mutate(risk_group = runif(n()) < job_loss_pct) %>% 
+    add_ui_takeup(UI_TAKEUP_RATE) %>% 
+    add_need_vars()
+  
+  data_all <- data_w_need %>%
+    household_summarise_stats() %>% 
+    mutate(type = "all")
+  
+  data_all_ui_pct <- data_w_need %>%
+    ui_percent_stats() %>% 
+    mutate(type = "all_ui_pct")
+  
+  data_sevburden <- data_w_need %>%
+    # Include only those who were severely rent burdened pre-covid
+    filter(is_rent_burdened_sev) %>%
+    household_summarise_stats() %>% 
+    mutate(type = "sevburden")
+  
+  data_sevburden_pct <- data_w_need %>%
+    filter(
+      pernum == 1, # keep only one row per household
+      hh_any_risk  # keep only vulnerable households
+    ) %>% 
+    as_survey_design(weights = hhwt) %>% 
+    group_by(city) %>% 
+    summarise(
+      sevburden_pct = survey_mean_ci90(is_rent_burdened_sev)
+    ) %>% 
+    mutate(type = "sevburden_pct")
+  
+  data_all_noui <- data_w_need %>%
+    # Include only those who don't get UI benefits
+    filter(hh_ui_benefits_month_reg == 0) %>%
+    household_summarise_stats() %>% 
+    mutate(type = "all_noui")
+  
+  data_all_ui <- data_w_need %>%
+    # Include only those who did get UI benefits
+    filter(hh_ui_benefits_month_reg > 0) %>%
+    household_summarise_stats() %>% 
+    mutate(type = "all_ui")
+  
+  data_lt80ami_ui_pct <- data_w_need %>%
+    # Include only households with income below 80% AMI
+    filter(hh_inc_nom > hud_inc_lim80) %>% 
+    ui_percent_stats() %>% 
+    mutate(type = "lt80ami_ui_pct")
+  
+  data_lt80ami_noui <- data_w_need %>%
+    # Include only households with income below 80% AMI
+    filter(hh_inc_nom > hud_inc_lim80) %>% 
+    # Include only those who don't get UI benefits
+    filter(hh_ui_benefits_month_reg == 0) %>%
+    household_summarise_stats() %>% 
+    mutate(type = "lt80ami_noui")
+  
+  data_lt80ami_ui <- data_w_need %>%
+    # Include only households with income below 80% AMI
+    filter(hh_inc_nom > hud_inc_lim80) %>% 
+    # Include only those who did get UI benefits
+    filter(hh_ui_benefits_month_reg > 0) %>%
+    household_summarise_stats() %>% 
+    mutate(type = "lt80ami_ui")
+  
+  bind_rows(
+    data_all,
+    data_all_ui_pct,
+    data_sevburden,
+    data_sevburden_pct,
+    data_all_noui,
+    data_all_ui,
+    data_lt80ami_ui_pct,
+    data_lt80ami_noui,
+    data_lt80ami_ui
+  ) %>% 
+    mutate(seed = seed)
+    
+}
+
+household_data_multi_cities <- seq_len(ITERATIONS) %>%
+  future_map_dfr(
+    .f = prep_household_data,
+    .data = filter(ipums_clean, !is.na(city), is_renter)
+  )
+
+household_data_multi_all_cities <- seq_len(ITERATIONS) %>%
+  future_map_dfr(
+    .f = prep_household_data,
+    .data = ipums_clean %>% 
+      filter(!is.na(city), is_renter) %>% 
+      mutate(city = "Total")
+  )
+
+household_data <- household_data_multi_cities %>% 
+  bind_rows(household_data_multi_all_cities) %>% 
+  select(-seed) %>% 
+  group_by(city, type) %>% 
+  summarise_all(mean) %>% 
+  ungroup()
+
+household_table_data <- household_data %>% 
+  add_moe() %>% 
+  mutate(city = factor(city, levels = city_order)) %>% 
+  arrange(city, desc(type))
+```
+
+### Table 1
+
+```{r table1-table}
+# show % of all renters that did/didn't get ui, join columns in from "all" table
+all_ui_pct_cols <- household_table_data %>% 
+  filter(type == "all_ui_pct") %>% 
+  select(city, matches("renter_hh_.*ui_pct")) %>% 
+  pivot_longer(-city) %>% 
+  mutate(
+    type = str_replace(name, ".*?((?:no)?ui).*", "all_\\1"),
+    name = str_replace(name, "noui", "ui"),
+  ) %>% 
+  pivot_wider(names_from = name, values_from = value)
+
+table1_data <- household_table_data %>% 
+  filter(type %in% c("all_ui", "all_noui")) %>% 
+  select(-matches("renter_hh_.*ui_pct")) %>% 
+  left_join(all_ui_pct_cols, by = c("city", "type")) %>% 
+  mutate(type = recode(type, "all_ui" = "UI Recipient Households", "all_noui" = "UI Non-Recipient Households")) %>% 
+  select(
+    city, type, starts_with("renter_households"), 
+    starts_with("renter_hh_ui_pct"), starts_with("lost_wages_agg"), 
+    starts_with("ui_benefits_reg"), starts_with("ui_benefits_all")
+  )
+
+
+table_1 <- table1_data %>% 
+  gt(rowname_col = "city", groupname_col = "type") %>% 
+  tab_spanner("Renter Households", starts_with("renter_households")) %>% 
+  tab_spanner("Share of All Renter Households", starts_with("renter_hh_ui_pct")) %>% 
+  tab_spanner("Total Lost Wages (Monthly)", starts_with("lost_wages_agg")) %>% 
+  tab_spanner("Total Standard UI Benefits (Monthly)", starts_with("ui_benefits_reg")) %>% 
+  tab_spanner("Total Standard and $300/week Enhanced UI Benefits (Monthly)", starts_with("ui_benefits_all300")) %>% 
+  cols_label(.list = hide_cols_list(table1_data)) %>% 
+  hide_moe_cols(HIDE_MOE) %>% 
+  highlight_total() %>%
+  fmt_number(contains("households"), suffixing = TRUE, decimals = 1) %>% 
+  fmt_number(ends_with("_households_moe_90"), suffixing = TRUE, decimals = 1, pattern = "(+/- {x})") %>% 
+  fmt_percent(contains("_pct"), decimals = 1) %>% 
+  fmt_percent(ends_with("_pct_moe_90"), decimals = 1, pattern = "(+/- {x})") %>% 
+  fmt_currency(contains("_monthly"), suffixing = TRUE, decimals = 1) %>% 
+  fmt_currency(ends_with("_monthly_moe_90"), suffixing = TRUE, decimals = 1, pattern = "(+/- {x})") %>% 
+  tab_header(
+    "Estimated renter households with lost income due to job loss",
+    "Estimated number of households to have or have not received UI benefits"
+  )
+
+table_1
+```
+
+---
+
+### Table 2
+
+```{r table2-table}
+# show % of all renters that did/didn't get ui, join columns in from "lt80ami" table
+lt80ami_ui_pct_cols <- household_table_data %>% 
+  filter(type == "lt80ami_ui_pct") %>% 
+  select(city, matches("renter_hh_.*ui_pct")) %>% 
+  pivot_longer(-city) %>% 
+  mutate(
+    type = str_replace(name, ".*?((?:no)?ui).*", "lt80ami_\\1"),
+    name = str_replace(name, "noui", "ui"),
+  ) %>% 
+  pivot_wider(names_from = name, values_from = value)
+  
+
+table2_data <- household_table_data %>% 
+  filter(type %in% c("lt80ami_ui", "lt80ami_noui")) %>% 
+  select(-matches("renter_hh_.*ui_pct")) %>% 
+  left_join(lt80ami_ui_pct_cols, by = c("city", "type")) %>% 
+  mutate(type = recode(type, "lt80ami_ui" = "UI Recipient Households", "lt80ami_noui" = "UI Non-Recipient Households")) %>% 
+  select(city, type, starts_with("renter_households"), starts_with("lost_wages_agg"), starts_with("ui_benefits_reg"), starts_with("ui_benefits_all"))
+
+
+table_2 <- table2_data %>% 
+  gt(rowname_col = "city", groupname_col = "type") %>% 
+  tab_spanner("Renter Households below 80% AMI with job loss", starts_with("renter_households")) %>%   
+  tab_spanner("Total Lost Wages (Monthly)", starts_with("lost_wages_agg")) %>% 
+  tab_spanner("Total Standard UI Benefits (Monthly)", starts_with("ui_benefits_reg")) %>% 
+    tab_spanner("Total Standard and $300/week Enhanced UI Benefits (Monthly)", starts_with("ui_benefits_all300")) %>% 
+  cols_label(.list = hide_cols_list(table2_data)) %>%
+  hide_moe_cols(HIDE_MOE) %>%  
+  highlight_total() %>%
+  fmt_number(contains("households"), suffixing = TRUE, decimals = 0) %>% 
+  fmt_number(ends_with("_households_moe_90"), suffixing = TRUE, decimals = 0, pattern = "(+/- {x})") %>% 
+  fmt_percent(contains("_pct"), decimals = 1) %>% 
+  fmt_percent(ends_with("_pct_moe_90"), decimals = 1, pattern = "(+/- {x})") %>% 
+  fmt_currency(contains("_monthly"), suffixing = TRUE, decimals = 0) %>% 
+  fmt_currency(ends_with("_monthly_moe_90"), suffixing = TRUE, decimals = 0, pattern = "(+/- {x})") %>% 
+  tab_header(
+    "Estimated renter households (with pre-COVID incomes below 80% AMI) with lost income due to job loss",
+    "Estimated number of households to have or have not received UI benefits"
+  )
+
+table_2
+```
+
+---
+
+
+```{r table3-data}
+
+prep_table3_data <- function(.data) {
+  # total renter population in NY state
+  nys_renter_pop_num <- .data %>% 
+    as_survey_design(weights = perwt) %>% 
+    summarise(
+      pop_renter_num = survey_total_ci90(1)
+    ) %>% 
+    pull(pop_renter_num)
+  
+  table3_pop <- .data %>% 
+    filter(!is.na(city)) %>% 
+    as_survey_design(weights = perwt) %>% 
+    group_by(city) %>% 
+    summarise(
+      pop_num = survey_total_ci90(1),
+      pop_renter_num = survey_total_ci90(is_renter)
+    ) %>% 
+    mutate(
+      pop_renter_nys_pct = pop_renter_num / nys_renter_pop_num
+    )
+  
+  table3_renter_pct <- .data %>% 
+    filter(!is.na(city), pernum == 1) %>% 
+    as_survey_design(weights = hhwt) %>% 
+    group_by(city) %>% 
+    summarise(
+      hh_renter_num = survey_total_ci90(is_renter),
+      hh_renter_pct = survey_mean_ci90(is_renter),
+    )
+  
+  table3_renter_stats <- .data %>% 
+    filter(!is.na(city), pernum == 1, is_renter) %>% 
+    as_survey_design(weights = hhwt) %>% 
+    group_by(city) %>% 
+    summarise(
+      hh_rent_burden_sev_num = survey_total_ci90(is_rent_burdened_sev, na.rm = TRUE),
+      hh_rent_burden_sev_pct = survey_mean_ci90(is_rent_burdened_sev, na.rm = TRUE),
+      hh_renter_lt80ami_num = survey_total_ci90(hh_inc_nom < hud_inc_lim80),
+      hh_renter_lt80ami_pct = survey_mean_ci90(hh_inc_nom < hud_inc_lim80)
+    )
+  
+  table3_data <- list(
+    table3_pop, table3_renter_pct, table3_renter_stats
+    ) %>% 
+    reduce(left_join, by = "city")
+}
+
+table3_data_cities <- prep_table3_data(ipums_clean)
+
+table3_data_all_cities <- ipums_clean %>% 
+  mutate(city = if_else(!is.na(city), "Total", city)) %>% 
+  prep_table3_data()
+
+table3_data <- bind_rows(table3_data_cities, table3_data_all_cities) %>% 
+  add_moe() %>% 
+  mutate(city = factor(city, levels = city_order)) %>% 
+  arrange(city) %>% 
+  # in final tables we leave some variables out, but keep them here commented
+  # out since they are useful to have for reference in the text
+  select(-starts_with("pop_renter_num"), -starts_with("pop_renter_nys_pct"))
+```
+
+
+```{r table3-table}
+table_3 <- table3_data %>% 
+  gt(rowname_col = "city") %>% 
+  tab_spanner("Total Population", 
+              starts_with("pop_num")) %>% 
+  tab_spanner("Renter Households", 
+              starts_with("hh_renter_num")) %>% 
+  tab_spanner("Renter Share of Households", 
+              starts_with("hh_renter_pct")) %>% 
+  tab_spanner("Number of Renter Households Severely Rent Burdened (Pre-COVID)", 
+              starts_with("hh_rent_burden_sev_num")) %>% 
+  tab_spanner("Share of Renter Households Severely Rent Burdened (Pre-COVID)", 
+              starts_with("hh_rent_burden_sev_pct")) %>% 
+  tab_spanner("Number of Renter Households with Incomes Below 80% AMI (Pre-COVID)", 
+              starts_with("hh_renter_lt80ami_num")) %>% 
+  tab_spanner("Share of Renter Households with Incomes Below 80% AMI (Pre-COVID)", 
+              starts_with("hh_renter_lt80ami_pct")) %>% 
+  cols_label(.list = hide_cols_list(table3_data)) %>% 
+  hide_moe_cols(HIDE_MOE) %>% 
+  highlight_total() %>% 
+  fmt_number(contains("_num"), suffixing = TRUE, decimals = 1) %>% 
+  fmt_number(ends_with("_num_moe_90"), suffixing = TRUE, decimals = 1, pattern = "(+/- {x})") %>% 
+  fmt_percent(contains("_pct"), decimals = 1) %>% 
+  fmt_percent(ends_with("_pct_moe_90"), decimals = 1, pattern = "(+/- {x})") %>% 
+  tab_header("Estimated number of renter households by pre-COVID rent burden and income")
+
+table_3
+```
+
+---
+
+### Table 4
+
+```{r table4-data}
+person_results_multi <- seq_len(ITERATIONS) %>%
+  future_map_dfr(
+    .f = function(seed, .data) {
+      set.seed(seed)
+      data_w_vars <- .data %>% 
+        mutate(risk_group = runif(n()) < job_loss_pct) %>% 
+        add_ui_takeup(UI_TAKEUP_RATE) %>% 
+        add_need_vars() %>% 
+        as_survey_design(weights = perwt)
+      
+      city_data <- data_w_vars %>% 
+        group_by(city) %>% 
+        summarise(
+          # Renters only:
+          
+          pop_num = survey_total_ci90(1),
+          
+          # total number of wage earners
+          wage_earners_num = survey_total_ci90(inc_wages > 0, na.rm = TRUE),
+          
+          # total number of wage earners estiamted to lose jobs
+          risk_earners_num = survey_total_ci90(risk_group, na.rm = TRUE),
+          
+          # share of wage earners estimated to lose jobs
+          risk_earners_pct = survey_mean_ci90(risk_group, na.rm = TRUE)
+        ) %>% 
+        ungroup() %>% 
+        mutate(seed = seed)
+      
+      all_cities_data <- data_w_vars %>% 
+        summarise(
+          pop_num = survey_total_ci90(1),
+          wage_earners_num = survey_total_ci90(inc_wages > 0, na.rm = TRUE),
+          risk_earners_num = survey_total_ci90(risk_group, na.rm = TRUE),
+          risk_earners_pct = survey_mean_ci90(risk_group, na.rm = TRUE)
+        ) %>% 
+        mutate(
+          seed = seed,
+          city = "Total"
+        )
+      
+      bind_rows(city_data, all_cities_data)
+        
+    },
+    .data = filter(ipums_clean, !is.na(city), is_renter)
+  )
+
+person_results <- person_results_multi %>% 
+  select(-seed) %>% 
+  group_by(city) %>% 
+  summarise_all(mean)
+
+
+```
+
+```{r table4-table}
+person_table_data <- person_results %>% 
+  add_moe() %>% 
+  mutate(city = factor(city, levels = city_order)) %>% 
+  arrange(city)
+
+table_4 <- person_table_data %>% 
+  gt(rowname_col = "city") %>% 
+  tab_spanner("Renter Population", starts_with("pop_num")) %>% 
+  tab_spanner("Number of Wage Earning Renters", starts_with("wage_earners_num")) %>% 
+  tab_spanner("Number of Wage Earning Renters Estimated to Lose Income Due to Job Loss", starts_with("risk_earners_num")) %>% 
+  tab_spanner("Share of Wage Earning Renters Estimated to Lose Income Due to Job Loss", starts_with("risk_earners_pct")) %>% 
+  cols_label(.list = hide_cols_list(person_table_data)) %>% 
+  hide_moe_cols(HIDE_MOE) %>% 
+  highlight_total() %>% 
+  fmt_number(contains("_num"), suffixing = TRUE, decimals = 1) %>%
+  fmt_number(contains("_num_moe_90"), suffixing = TRUE, decimals = 1, pattern = "(+/- {x})") %>%
+  fmt_percent(contains("_pct"), decimals = 1) %>% 
+  fmt_percent(ends_with("_pct_moe_90"), decimals = 1, pattern = "(+/- {x})") %>% 
+  tab_header("Estimated Number of Renters by Wage Earning Status")
+
+table_4
+```
+
+---
+
+### Figure 1
+
+
+```{r figure1-data}
+size_summarise_stats <- function(.data) {
+  size_data <- .data %>%
+    filter(
+      pernum == 1, # keep only one row per household
+      is_renter    # keep only renter households
+    ) %>% 
+    as_survey_design(weights = hhwt) %>%
+    group_by(city, bldg_size, .drop = FALSE) %>%
+    summarise(households = survey_total(vartype = "ci", level = 0.90))
+  
+  size_totals <- size_data %>%
+    mutate(
+      households_moe = households_upp - households,
+      households_moe_sqr = households_moe^2
+    ) %>%
+    group_by(city) %>% 
+    summarize(
+      total = sum(households),
+      total_moe = sqrt(sum(households_moe_sqr))
+    ) %>% 
+    ungroup()
+  
+  size_rates <- size_data %>%
+    left_join(size_totals, by = "city") %>% 
+    mutate(
+      households_moe = households_upp - households,
+      share = households / total,
+      share_moe = (1 / total) * sqrt(households_moe^2 - (share * total_moe)^2),
+      share_low = share - share_moe,
+      share_upp = share + share_moe
+    ) %>%
+    select(city, bldg_size, share, share_low, share_upp)
+  
+  size_rates
+}
+
+
+size_data_multi <- seq_len(ITERATIONS) %>%
+  future_map_dfr(
+    .f = function(seed, .data) {
+      set.seed(seed)
+      
+      data_w_vars <- .data %>% 
+        mutate(risk_group = runif(n()) < job_loss_pct) %>% 
+        add_ui_takeup(UI_TAKEUP_RATE) %>% 
+        add_need_vars()
+      
+      size_loss_stats <- data_w_vars %>% 
+        filter(hh_any_risk) %>% # keep only households with lost job/income
+        size_summarise_stats() %>% 
+        mutate(type = "Lost income due to job loss")
+      
+      size_noloss_stats <- data_w_vars %>% 
+        filter(!hh_any_risk) %>% # keep only households without lost job/income
+        size_summarise_stats() %>% 
+        mutate(type = "Did not lose income due to job loss")
+      
+      bind_rows(size_loss_stats, size_noloss_stats) %>% 
+        filter(bldg_size != "other") %>% 
+        mutate(seed = seed)
+        
+    },
+    .data = filter(ipums_clean, !is.na(city), is_renter)
+  )
+
+size_data <- size_data_multi %>% 
+  select(-seed) %>% 
+  group_by(city, type, bldg_size) %>% 
+  summarise_all(mean) %>% 
+  ungroup() %>% 
+  mutate(city = factor(city, levels = city_order)) %>% 
+  arrange(city, desc(type), bldg_size)
+```
+
+
+```{r figure1-plot, fig.width=8, fig.height=12}
+fig_1 <- size_data %>% 
+  mutate(share_low = if_else(share_low < 0, 0, share_low)) %>% 
+  fc_col_plot_cluster(
+    x = bldg_size,
+    y = share,
+    fill = type,
+    y_limits = c(0, .8),
+    ymin = share_low,
+    ymax = share_upp,
+    y_format = "percent"
+  ) +
+  scale_fill_manual(values = c("#2c7fb8", "#98e2c9")) +
+  lemon::facet_rep_wrap(~city, ncol = 2, repeat.tick.labels = 'bottom') +
+  labs(
+    title = str_glue(
+      "Distribution of renter households across building sizes, by job/income loss"
+    ),
+    x = "Units in building",
+    y = "Share of renter households",
+    fill = NULL,
+    caption = str_glue(
+      "Notes: Only renter households with at least one emloyed member estimated to have lost their job are included. 
+      Error bars represent 90% confidence intervals, and value labels reflect point estimates.
+      
+      Sources: American Community Survey (2018), IPUMS USA, NYU Furman Center"
+    )
+  )
+
+fig_1
+```
+
+---
+
+### Table 5
+
+
+```{r table5-data}
+
+prep_table5_data <- function(seed, .data) {
+  set.seed(seed)
+  
+  data_w_need <- .data %>%
+    mutate(risk_group = runif(n()) < job_loss_pct) %>%
+    add_ui_takeup(UI_TAKEUP_RATE) %>%
+    add_need_vars() %>%
+    filter(
+      pernum == 1, # keep only one row per household
+      hh_any_risk # keep only vulnerable households
+    ) %>%
+    as_survey_design(weights = hhwt) %>%
+    group_by(city) %>%
+    summarise(
+      renter_households = survey_total_ci90(1),
+      rent_monthly_tot = survey_total_ci90(gross_rent_nom, na.rm = TRUE),
+      rent_monthly_avg = survey_mean_ci90(gross_rent_nom, na.rm = TRUE),
+      lost_wages_agg_monthly = survey_total_ci90(hh_risk_wages / 12),
+      rent_need_tot_monthly = survey_total_ci90(risk_rent_need),
+      rent_need_ui_reg_tot_monthly = survey_total_ci90(risk_rent_need_ui_reg),
+      rent_need_ui_all300_tot_monthly = survey_total_ci90(risk_rent_need_ui_all300),
+    ) %>%
+    ungroup() %>% 
+    mutate(seed = seed)
+}
+
+
+renter_1_4_stats_cities <- seq_len(ITERATIONS) %>%
+  future_map_dfr(
+    .f = prep_table5_data,
+    .data = ipums_clean %>% 
+      filter(!is.na(city), is_renter, bldg_size %in% c("1", "2-4"))
+  )
+
+renter_1_4_stats_all_cities <- seq_len(ITERATIONS) %>%
+  future_map_dfr(
+    .f = prep_table5_data,
+    .data = ipums_clean %>% 
+      filter(!is.na(city), is_renter, bldg_size %in% c("1", "2-4")) %>% 
+        mutate(city = if_else(!is.na(city), "Total", city))
+  )
+
+table5_data <- renter_1_4_stats_cities %>% 
+  bind_rows(renter_1_4_stats_all_cities) %>% 
+  select(-seed) %>% 
+  group_by(city) %>% 
+  summarise_all(mean) %>% 
+  ungroup() %>% 
+  add_moe() %>% 
+  mutate(city = factor(city, levels = city_order)) %>% 
+  arrange(city)
+      
+```
+
+```{r table5-table}
+table_5 <- table5_data %>% 
+  gt(rowname_col = "city") %>% 
+  tab_spanner("Renter Households in 1-4 Unit Properties", 
+              starts_with("renter_households")) %>% 
+  tab_spanner("Total Rent (Monthly)", starts_with("rent_monthly_tot")) %>%
+  tab_spanner("Average Rent (Monthly)", starts_with("rent_monthly_avg")) %>%
+  tab_spanner("Total Lost Wages (Monthly)", starts_with("lost_wages_agg")) %>% 
+  tab_spanner("Rental Assistance Need - No UI Benefits (Monthly)", 
+              starts_with("rent_need_tot_monthly")) %>% 
+  tab_spanner("Rental Assistance Need - Standard UI Benefits (Monthly)", 
+              starts_with("rent_need_ui_reg_tot_monthly")) %>% 
+  tab_spanner("Rental Assistance Need - Standard Plus $300/week Enhanced UI Benefits (Monthly)", 
+              starts_with("rent_need_ui_all300_tot_monthly")) %>% 
+  cols_label(.list = hide_cols_list(table5_data)) %>% 
+  hide_moe_cols(TRUE) %>% 
+  highlight_total() %>% 
+  fmt_number(contains("_households"), suffixing = TRUE, decimals = 0) %>% 
+  fmt_number(ends_with("_households_moe_90"), suffixing = TRUE, decimals = 0, pattern = "(+/- {x})") %>% 
+  fmt_currency(contains("_monthly"), suffixing = TRUE, decimals = 1) %>% 
+  fmt_currency(ends_with("_monthly_moe_90"), suffixing = TRUE, decimals = 1, pattern = "(+/- {x})") %>% 
+  fmt_currency(contains("rent_monthly_avg"), decimals = 0) %>% 
+  fmt_currency(ends_with("rent_monthly_avg"),decimals = 0, pattern = "(+/- {x})") %>% 
+  tab_header(
+    "Estimated rental assistance need for households in 1-4 unit properties with lost income due to job loss"
+  )
+
+table_5
+```
+
+---
+
+```{r need-data}
+# tables 6-7
+need_summarise_stats <- function(.data) {
+  .data %>%  
+    filter(
+      pernum == 1, # keep only one row per household
+      hh_any_risk  # keep only vulnerable households
+    ) %>% 
+    as_survey_design(weights = hhwt) %>% 
+    group_by(city) %>% 
+    summarise(
+      rent_need_tot_monthly = survey_total_ci90(risk_rent_need),
+      rent_need_ui_reg_tot_monthly = survey_total_ci90(risk_rent_need_ui_reg),
+      rent_need_ui_all300_tot_monthly = survey_total_ci90(risk_rent_need_ui_all300),
+    ) %>% 
+    ungroup()
+}
+
+prep_need_data <- function(seed, .data) {
+  set.seed(seed)
+  
+
+  data_w_vars <- .data %>% 
+    mutate(risk_group = runif(n()) < job_loss_pct) %>% 
+    add_ui_takeup(UI_TAKEUP_RATE)
+  
+  
+  data_all_default <- data_w_vars %>% 
+    add_need_vars() %>%
+    need_summarise_stats()
+  
+  data_all_30cutoff <- data_w_vars %>% 
+    mutate(target_burden = 0.30) %>%
+    add_need_vars() %>%
+    need_summarise_stats()
+  
+  
+  data_lt80ami_default <- data_w_vars %>% 
+    # Include only households with income below 80% AMI
+    filter(hh_inc_nom > hud_inc_lim80) %>% 
+    add_need_vars() %>%
+    need_summarise_stats()
+  
+  
+  bind_rows(
+    data_all_default %>% mutate(type = "all_default"),
+    data_all_30cutoff %>% mutate(type = "all_30cutoff"),
+    data_lt80ami_default %>% mutate(type = "lt80ami_default"),
+  ) %>%
+    mutate(seed = seed)
+
+    
+}
+
+need_data_multi_cities <- seq_len(ITERATIONS) %>%
+  future_map_dfr(
+    .f = prep_need_data,
+    .data = ipums_clean %>% filter(!is.na(city), is_renter)
+  )
+
+need_data_multi_all_cities <- seq_len(ITERATIONS) %>%
+  future_map_dfr(
+    .f = prep_need_data,
+    .data = ipums_clean %>% 
+      filter(!is.na(city), is_renter) %>% 
+      mutate(city = "Total")
+  )
+
+need_data <- need_data_multi_cities %>% 
+  bind_rows(need_data_multi_all_cities) %>% 
+  select(-seed) %>% 
+  group_by(city, type) %>% 
+  summarise_all(mean) %>% 
+  ungroup()
+
+need_table_data <- need_data %>% 
+  add_moe() %>% 
+  mutate(city = factor(city, levels = city_order)) %>% 
+  arrange(city, desc(type))
+```
+
+### Table 6
+
+```{r table6-table}
+table6_data <- need_table_data %>% 
+  filter(type == "all_default") %>% 
+  mutate(type = "Higher of pre-COVID rent-to-income ratio or 30% rent-to-income ratio")
+
+
+table_6 <- table6_data %>% 
+  gt(rowname_col = "city", groupname_col = "type") %>% 
+  tab_spanner("No UI Benefits (Monthly)", starts_with("rent_need_tot_monthly")) %>% 
+  tab_spanner("Standard UI Benefits (Monthly)", starts_with("rent_need_ui_reg_tot_monthly")) %>% 
+  tab_spanner("Standard Plus $300/week Enhanced UI Benefits (Monthly)", starts_with("rent_need_ui_all300_tot_monthly")) %>% 
+  cols_label(.list = hide_cols_list(table6_data)) %>% 
+  hide_moe_cols(HIDE_MOE) %>% 
+  highlight_total() %>% 
+  fmt_currency(contains("_monthly"), suffixing = TRUE, decimals = 1) %>% 
+  fmt_currency(ends_with("_monthly_moe_90"), suffixing = TRUE, decimals = 1, pattern = "(+/- {x})") %>% 
+  tab_header(
+    "Estimated rental assistance need for households with lost income due to job loss",
+    "Separated by target rent-to-income ratio"
+  )
+
+table_6
+```
+
+---
+
+### Table 7
+
+
+```{r table7-table}
+table7_data <- need_table_data %>% 
+  filter(type %in% c("all_default", "lt80ami_default")) %>% 
+  mutate(type = recode(type, "all_default" = "All households", "lt80ami_default" = "Households with pre-COVID income below 80% AMI")) %>% 
+  arrange(city, type)
+
+
+table_7 <- table7_data %>% 
+  gt(rowname_col = "city", groupname_col = "type") %>% 
+  tab_spanner("No UI Benefits (Monthly)", starts_with("rent_need_tot_monthly")) %>% 
+  tab_spanner("Standard UI Benefits (Monthly)", starts_with("rent_need_ui_reg_tot_monthly")) %>% 
+  tab_spanner("Standard Plus $300/week Enhanced UI Benefits (Monthly)", starts_with("rent_need_ui_all300_tot_monthly")) %>% 
+  cols_label(.list = hide_cols_list(table7_data)) %>% 
+  hide_moe_cols(HIDE_MOE) %>% 
+  highlight_total() %>% 
+  fmt_currency(contains("_monthly"), suffixing = TRUE, decimals = 1) %>% 
+  fmt_currency(ends_with("_monthly_moe_90"), suffixing = TRUE, decimals = 1, pattern = "(+/- {x})") %>% 
+  tab_header(
+    "Estimated rental assistance need for households with lost income due to job loss",
+    "Separated by pre-COVID income level"
+  )
+
+table_7
+```
+
+---
+
+### Extra Stats
+
+There are just a couple simple stats that are helpful to have, and as long as they don't involve the variables related to job loss (which require the multiple iterations) you can easily add them here, for person or household-level.
+
+```{r}
+ipums_clean %>% 
+  filter(pernum == 1, !is.na(city)) %>% 
+  as_survey_design(weights = hhwt) %>% 
+  summarise(
+    total_households = survey_total_ci90(1)
+  )
+```
+
+```{r}
+ipums_clean %>% 
+  filter(is_renter) %>% 
+  as_survey_design(weights = perwt) %>% 
+  summarise(
+    renter_population = survey_total_ci90(1)
+  )
+```
