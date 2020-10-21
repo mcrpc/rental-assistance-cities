@@ -80,7 +80,7 @@ add_need_vars <- function(.data) {
       # Number of household members estimated to have lost their job
       hh_risk_members_num = sum(risk_group, na.rm = TRUE),
       
-      # Number of wag earners in household
+      # Number of wage earners in household
       hh_wage_earners_num = sum(inc_wages > 0, na.rm = TRUE),
       
       # Household with at least one wage earner in a more vulnerable occupation

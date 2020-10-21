@@ -143,9 +143,9 @@ ipums_clean <- ipums_raw %>%
       # county %in% c(5, 47, 61, 81, 85) ~ "New York City",
       puma %in% c(3106) ~ "Yonkers",
       puma %in% c(1205, 1206) ~ "Buffalo",
-      puma %in% c(701, 703) ~ "Syracuse",
+      puma %in% c(701) ~ "Syracuse",
       puma %in% c(2001) ~ "Albany",
-      puma %in% c(901, 902, 903) ~ "Rochester"
+      puma %in% c(902, 903) ~ "Rochester"
     ),
     # Set missing values
     inc_wages = incwage %>% na_if(999999) %>% na_if(999998) %>% na_if(0),
