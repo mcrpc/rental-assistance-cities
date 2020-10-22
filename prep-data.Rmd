@@ -35,23 +35,23 @@ options(scipen = 999)
 
 ```{r r-sources}
 # Script to prepare BLS data
-source("bls-emp-ny.R")
-
-# Script to prepare renter adjustment factor
-source("renter_unemp_adj.R")
+source("bls-emp-il.R")
 
 # Load function ind_to_bls() to recode IPUMS ind codes to BLS ones we're using
 source("R/ind_to_bls.R")
+
+# Script to prepare renter adjustment factor
+source("renter_unemp_adj.R")
 ```
 
 ### BLS Unemployment Data
 
-We get data from the US Bureau of Labor Statistics (BLS) Current Employment Statistics (CES) state/metro database for all of New York by industry group. In general renters experience higher unemployment rates than homeowners, even within the same industry, and since we are focusing on renters in this analysis we need to adjust for this difference. To achieve this we calculate renter adjustment factors by industry for the unemployment rates in NY and apply those to the BLS CES data to arrive at our final numbers for the percent of job loss by industry between February 2020 and August 2020.
+We get data from the US Bureau of Labor Statistics (BLS) Current Employment Statistics (CES) state/metro database for all of Illinois by industry group. In general renters experience higher unemployment rates than homeowners, even within the same industry, and since we are focusing on renters in this analysis we need to adjust for this difference. To achieve this we calculate renter adjustment factors by industry for the unemployment rates in NY and apply those to the BLS CES data to arrive at our final numbers for the percent of job loss by industry between February 2020 and August 2020.
 
 ```{r}
 renter_unemp_data <- read_rds(path("data", "unemp_renter_adj.rds"))
 
-bls_ind_job_loss <- read_rds("data/bls_emp_ny.rds") %>% 
+bls_ind_job_loss <- read_rds("data/bls_emp_il.rds") %>% 
   rename(ind_group_bls = supersector_industry) %>% 
   left_join(renter_unemp_data, by = "ind_group_bls") %>% 
   transmute(
@@ -108,7 +108,7 @@ All data for this analysis comes from [_IPUMS USA, University of Minnesota_](htt
 
 ```{r load-ipums}
 # Read in IPUMS USA ACS microdata, standardize the column names
-ipums_raw <- read_csv("data/ipums_acs-2018-1yr_ny.csv.gz") %>% 
+ipums_raw <- read_csv("data/ipums_acs-2018-1yr_il.csv.gz") %>% 
   rename_with(str_to_lower)
 ```
 

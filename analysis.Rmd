@@ -39,6 +39,7 @@ pkgs <- c(
   "furrr",
   "gt",
   "fs",
+  "lemon"
 )
 
 install.packages(pkgs)
