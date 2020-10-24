@@ -27,6 +27,7 @@ library(tidyverse) # general data manipulation and graphing
 library(scales) # number formatting
 library(srvyr) # survey functions
 library(gt) # making tables
+library(ipumsr)
 
 # No scientific notation in outputs
 options(scipen = 999)
@@ -108,8 +109,13 @@ All data for this analysis comes from [_IPUMS USA, University of Minnesota_](htt
 
 ```{r load-ipums}
 # Read in IPUMS USA ACS microdata, standardize the column names
-ipums_raw <- read_csv("data/ipums_acs-2018-1yr_il.csv.gz") %>% 
-  rename_with(str_to_lower)
+ipums_raw <- read_ipums_ddi("data/usa_00001.xml") %>%
+  read_ipums_micro(verbose = FALSE, var_attrs = NULL) %>%
+  rename_with(str_to_lower) %>%
+  mutate_if(is.integer, as.double)
+
+# ipums_raw2 <- read_csv("data/ipums_acs-2018-1yr_ny.csv.gz") %>%
+#   rename_with(str_to_lower)
 ```
 
 
@@ -132,6 +138,7 @@ ipums_clean <- ipums_raw %>%
   ) %>% 
   mutate(ind_group_bls = ind_to_bls(ind)) %>% 
   left_join(bls_ind_job_loss, by = "ind_group_bls") %>% 
+  left_join() %>%
   mutate(
     # Define cities
 
@@ -139,14 +146,14 @@ ipums_clean <- ipums_raw %>%
     # matched to the relevant PUMAs. To replicate this analysis elsewhere it's
     # recommended to use the website Geocorr referenced above to match areas
     # of interest to PUMAs.
-    city = case_when(
-      # county %in% c(5, 47, 61, 81, 85) ~ "New York City",
-      puma %in% c(3106) ~ "Yonkers",
-      puma %in% c(1205, 1206) ~ "Buffalo",
-      puma %in% c(701) ~ "Syracuse",
-      puma %in% c(2001) ~ "Albany",
-      puma %in% c(902, 903) ~ "Rochester"
-    ),
+    # city = case_when(
+    #   # county %in% c(5, 47, 61, 81, 85) ~ "New York City",
+    #   puma %in% c(3106) ~ "Yonkers",
+    #   puma %in% c(1205, 1206) ~ "Buffalo",
+    #   puma %in% c(701) ~ "Syracuse",
+    #   puma %in% c(2001) ~ "Albany",
+    #   puma %in% c(902, 903) ~ "Rochester"
+    # ),
     # Set missing values
     inc_wages = incwage %>% na_if(999999) %>% na_if(999998) %>% na_if(0),
     
@@ -183,17 +190,17 @@ ipums_clean <- ipums_raw %>%
   mutate(
     
     # UI benefits
+    # https://eligibility.com/unemployment/illinois-il-unemployment-benefits
     # These are set using the NY state eligibility criteria, and will need to
     # be adjusted for local details 
     # NOTE: These are adjusted in a subsequent process based on job loss assumptions
     inc_wages_qtr = inc_wages/4,
     
     ui_benefits_month_reg = case_when(
-      inc_wages_qtr <= 2600 ~ 0,
-      inc_wages_qtr <= 3575 ~ if_else(inc_wages_qtr/25 < 104, 104, inc_wages_qtr/25),
-      inc_wages_qtr > 3575 ~ if_else(inc_wages_qtr/26 < 143, 143, inc_wages_qtr/26),
+      inc_wages_qtr <= 1600 ~ 0,
+      inc_wages_qtr > 1600 ~ if_else(inc_wages_qtr/26 < 143, 143, inc_wages_qtr/26),
       TRUE ~ 0
-    ) %>% 
+    ) %>%
       if_else(. > 504, 504, .) * 4,
     
     # Enhanced UI benefits
@@ -212,4 +219,5 @@ ipums_clean <- ipums_raw %>%
   ungroup()
 
 write_rds(ipums_clean, path("data", "ipums_clean.rds"))
+source("write_pumas_geojson.R")
 ```

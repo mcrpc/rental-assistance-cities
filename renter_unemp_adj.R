@@ -8,9 +8,9 @@ source(path("R", "ind_to_bls.R"))
 
 
 # Read in IPUMS USA ACS microdata, standardize the column names
-ipums_raw <- path("data", "ipums_acs-2018-1yr_ny.csv.gz") %>% 
-  read_csv() %>% 
-  rename_all(str_to_lower)
+ipums_raw <- read_ipums_ddi("data/usa_00001.xml") %>%
+  read_ipums_micro() %>%
+  rename_with(str_to_lower)
 
 # Add column with BLS indistry categories, filter to relevent universe, set up
 # survey weights
