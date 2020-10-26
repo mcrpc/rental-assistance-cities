@@ -126,8 +126,8 @@ survey_mean_ci90 <- partial(survey_mean, vartype = "ci", level = 0.90)
 
 ```{r county-order}
 county_order <- c(
-  "Champaign", "Macon", "Madison", "McLean", "Peoria", "Rock Island",
-  "Sangamon", "St. Clair", "Tazewell", "Total"
+  "McLean", "Champaign", "Macon", "Peoria", "Sangamon", "Tazewell", 
+  "Total"
 )
 ```
 

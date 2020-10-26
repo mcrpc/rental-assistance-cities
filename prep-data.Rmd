@@ -123,7 +123,7 @@ ipums_raw <- read_ipums_ddi("data/usa_00001.xml") %>%
 
 First we join the UI claims and HUD AMI data onto the IPUMS data, and create a variety of new variables related to incomes, rents, and household members that will be used in determining eligibility of UI and assessing rental assistance need. 
 
-For unemployment insurance benefits, we also have to make some simplifying assumptions due to lack of information and eligibility based on their job, immigration status, and quarterly wages. In determining eligibility we assume each person's highest quarterly wages to simply be one quarter of their total annual wages, and then apply the eligibility criteria as defined be New York State. We start by determining eligibility and the amount of UI benefits based solely on wages for every person, and then below once job loss assumptions are incorporated we adjust these based on job losses and UI recipiency rates. 
+For unemployment insurance benefits, we also have to make some simplifying assumptions due to lack of information and eligibility based on their job, immigration status, and quarterly wages. In determining eligibility we assume each person's highest quarterly wages to simply be one quarter of their total annual wages, and then apply the eligibility criteria as defined by the State of Illinois. We start by determining eligibility and the amount of UI benefits based solely on wages for every person, and then below once job loss assumptions are incorporated we adjust these based on job losses and UI recipiency rates. 
  
 ```{r general-calculations}
 # Create all the universal person- and household-level variables for analysis
@@ -147,9 +147,9 @@ ipums_clean <- ipums_raw %>%
     # of interest to PUMAs.
     county_name = case_when(
       # county %in% c(5, 47, 61, 81, 85) ~ "New York City",
-      puma %in% c(0105) ~ "Rock Island",
-      puma %in% c(1104, 1105) ~ "St. Clair",
-      puma %in% c(1204, 1205) ~ "Madison",
+      # puma %in% c(0105) ~ "Rock Island",
+      # puma %in% c(1104, 1105) ~ "St. Clair",
+      # puma %in% c(1204, 1205) ~ "Madison",
       puma %in% c(1300) ~ "Sangamon",
       puma %in% c(1500) ~ "Macon",
       puma %in% c(1701) ~ "Peoria",
