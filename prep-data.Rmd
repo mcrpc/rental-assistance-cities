@@ -137,8 +137,7 @@ ipums_clean <- ipums_raw %>%
     gq %in% 1:2 
   ) %>% 
   mutate(ind_group_bls = ind_to_bls(ind)) %>% 
-  left_join(bls_ind_job_loss, by = "ind_group_bls") %>% 
-  left_join() %>%
+  left_join(bls_ind_job_loss, by = "ind_group_bls") %>%
   mutate(
     # Define cities
 
@@ -146,14 +145,18 @@ ipums_clean <- ipums_raw %>%
     # matched to the relevant PUMAs. To replicate this analysis elsewhere it's
     # recommended to use the website Geocorr referenced above to match areas
     # of interest to PUMAs.
-    # city = case_when(
-    #   # county %in% c(5, 47, 61, 81, 85) ~ "New York City",
-    #   puma %in% c(3106) ~ "Yonkers",
-    #   puma %in% c(1205, 1206) ~ "Buffalo",
-    #   puma %in% c(701) ~ "Syracuse",
-    #   puma %in% c(2001) ~ "Albany",
-    #   puma %in% c(902, 903) ~ "Rochester"
-    # ),
+    county_name = case_when(
+      # county %in% c(5, 47, 61, 81, 85) ~ "New York City",
+      puma %in% c(0105) ~ "Rock Island",
+      puma %in% c(1104, 1105) ~ "St. Clair",
+      puma %in% c(1204, 1205) ~ "Madison",
+      puma %in% c(1300) ~ "Sangamon",
+      puma %in% c(1500) ~ "Macon",
+      puma %in% c(1701) ~ "Peoria",
+      puma %in% c(1900) ~ "Tazewell",
+      puma %in% c(2000) ~ "McLean",
+      puma %in% c(2100) ~ "Champaign",
+    ),
     # Set missing values
     inc_wages = incwage %>% na_if(999999) %>% na_if(999998) %>% na_if(0),
     
@@ -196,12 +199,14 @@ ipums_clean <- ipums_raw %>%
     # NOTE: These are adjusted in a subsequent process based on job loss assumptions
     inc_wages_qtr = inc_wages/4,
     
+    inc_wages_week = inc_wages/52,
+    
     ui_benefits_month_reg = case_when(
-      inc_wages_qtr <= 1600 ~ 0,
-      inc_wages_qtr > 1600 ~ if_else(inc_wages_qtr/26 < 143, 143, inc_wages_qtr/26),
+      inc_wages_qtr < 800 ~ 0,
+      inc_wages_qtr >= 800 ~ if_else(inc_wages_week <= 108, 51, ceiling(inc_wages_week * .47)),
       TRUE ~ 0
     ) %>%
-      if_else(. > 504, 504, .) * 4,
+      if_else(. > 484, 484, .) * 4,
     
     # Enhanced UI benefits
     # We look at two possible values for this in this analysis, but others can
@@ -219,5 +224,4 @@ ipums_clean <- ipums_raw %>%
   ungroup()
 
 write_rds(ipums_clean, path("data", "ipums_clean.rds"))
-source("write_pumas_geojson.R")
 ```

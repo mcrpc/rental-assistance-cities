@@ -124,10 +124,10 @@ survey_mean_ci90 <- partial(survey_mean, vartype = "ci", level = 0.90)
 ```
 
 
-```{r city-order}
-city_order <- c(
-  "Albany", "Buffalo", "Rochester", "Syracuse", "Yonkers",
-  "Total"
+```{r county-order}
+county_order <- c(
+  "Champaign", "Macon", "Madison", "McLean", "Peoria", "Rock Island",
+  "Sangamon", "St. Clair", "Tazewell", "Total"
 )
 ```
 
@@ -201,7 +201,7 @@ highlight_total <- function(.data) {
       style = cell_fill(color = "#D3D3D3"), 
       locations = list(
         cells_stub(rows = matches("Total")),
-        cells_body(rows = city == "Total")
+        cells_body(rows = county_name == "Total")
       )
     )
 }
@@ -219,7 +219,7 @@ household_summarise_stats <- function(.data) {
       hh_any_risk  # keep only vulnerable households
     ) %>% 
     as_survey_design(weights = hhwt) %>% 
-    group_by(city) %>%
+    group_by(county_name) %>%
     summarise(
       renter_households = survey_total_ci90(1),
       lost_wages_agg_monthly = survey_total_ci90(hh_risk_wages/12),
@@ -239,7 +239,7 @@ ui_percent_stats <- function(.data) {
       # Keep all renter households, not just ones with income loss
     ) %>% 
     as_survey_design(weights = hhwt) %>% 
-    group_by(city) %>% 
+    group_by(county_name) %>% 
     summarise(
       renter_hh_ui_pct = survey_mean_ci90(hh_any_risk & hh_ui_benefits_month_reg > 0),
       renter_hh_noui_pct = survey_mean_ci90(!is.na(hh_any_risk) & hh_any_risk & hh_ui_benefits_month_reg == 0)
@@ -274,7 +274,7 @@ prep_household_data <- function(seed, .data) {
       hh_any_risk  # keep only vulnerable households
     ) %>% 
     as_survey_design(weights = hhwt) %>% 
-    group_by(city) %>% 
+    group_by(county_name) %>% 
     summarise(
       sevburden_pct = survey_mean_ci90(is_rent_burdened_sev)
     ) %>% 
@@ -329,31 +329,31 @@ prep_household_data <- function(seed, .data) {
     
 }
 
-household_data_multi_cities <- seq_len(ITERATIONS) %>%
+household_data_multi_counties <- seq_len(ITERATIONS) %>%
   future_map_dfr(
     .f = prep_household_data,
-    .data = filter(ipums_clean, !is.na(city), is_renter)
+    .data = filter(ipums_clean, !is.na(county_name), is_renter)
   )
 
-household_data_multi_all_cities <- seq_len(ITERATIONS) %>%
+household_data_multi_all_counties <- seq_len(ITERATIONS) %>%
   future_map_dfr(
     .f = prep_household_data,
     .data = ipums_clean %>% 
-      filter(!is.na(city), is_renter) %>% 
-      mutate(city = "Total")
+      filter(!is.na(county_name), is_renter) %>% 
+      mutate(county_name = "Total")
   )
 
-household_data <- household_data_multi_cities %>% 
-  bind_rows(household_data_multi_all_cities) %>% 
+household_data <- household_data_multi_counties %>% 
+  bind_rows(household_data_multi_all_counties) %>% 
   select(-seed) %>% 
-  group_by(city, type) %>% 
+  group_by(county_name, type) %>% 
   summarise_all(mean) %>% 
   ungroup()
 
 household_table_data <- household_data %>% 
   add_moe() %>% 
-  mutate(city = factor(city, levels = city_order)) %>% 
-  arrange(city, desc(type))
+  mutate(county_name = factor(county_name, levels = county_order)) %>% 
+  arrange(county_name, desc(type))
 ```
 
 ### Table 1
@@ -362,8 +362,8 @@ household_table_data <- household_data %>%
 # show % of all renters that did/didn't get ui, join columns in from "all" table
 all_ui_pct_cols <- household_table_data %>% 
   filter(type == "all_ui_pct") %>% 
-  select(city, matches("renter_hh_.*ui_pct")) %>% 
-  pivot_longer(-city) %>% 
+  select(county_name, matches("renter_hh_.*ui_pct")) %>% 
+  pivot_longer(-county_name) %>% 
   mutate(
     type = str_replace(name, ".*?((?:no)?ui).*", "all_\\1"),
     name = str_replace(name, "noui", "ui"),
@@ -373,17 +373,17 @@ all_ui_pct_cols <- household_table_data %>%
 table1_data <- household_table_data %>% 
   filter(type %in% c("all_ui", "all_noui")) %>% 
   select(-matches("renter_hh_.*ui_pct")) %>% 
-  left_join(all_ui_pct_cols, by = c("city", "type")) %>% 
+  left_join(all_ui_pct_cols, by = c("county_name", "type")) %>% 
   mutate(type = recode(type, "all_ui" = "UI Recipient Households", "all_noui" = "UI Non-Recipient Households")) %>% 
   select(
-    city, type, starts_with("renter_households"), 
+    county_name, type, starts_with("renter_households"), 
     starts_with("renter_hh_ui_pct"), starts_with("lost_wages_agg"), 
     starts_with("ui_benefits_reg"), starts_with("ui_benefits_all")
   )
 
 
 table_1 <- table1_data %>% 
-  gt(rowname_col = "city", groupname_col = "type") %>% 
+  gt(rowname_col = "county_name", groupname_col = "type") %>% 
   tab_spanner("Renter Households", starts_with("renter_households")) %>% 
   tab_spanner("Share of All Renter Households", starts_with("renter_hh_ui_pct")) %>% 
   tab_spanner("Total Lost Wages (Monthly)", starts_with("lost_wages_agg")) %>% 
@@ -414,8 +414,8 @@ table_1
 # show % of all renters that did/didn't get ui, join columns in from "lt80ami" table
 lt80ami_ui_pct_cols <- household_table_data %>% 
   filter(type == "lt80ami_ui_pct") %>% 
-  select(city, matches("renter_hh_.*ui_pct")) %>% 
-  pivot_longer(-city) %>% 
+  select(county_name, matches("renter_hh_.*ui_pct")) %>% 
+  pivot_longer(-county_name) %>% 
   mutate(
     type = str_replace(name, ".*?((?:no)?ui).*", "lt80ami_\\1"),
     name = str_replace(name, "noui", "ui"),
@@ -426,13 +426,13 @@ lt80ami_ui_pct_cols <- household_table_data %>%
 table2_data <- household_table_data %>% 
   filter(type %in% c("lt80ami_ui", "lt80ami_noui")) %>% 
   select(-matches("renter_hh_.*ui_pct")) %>% 
-  left_join(lt80ami_ui_pct_cols, by = c("city", "type")) %>% 
+  left_join(lt80ami_ui_pct_cols, by = c("county_name", "type")) %>% 
   mutate(type = recode(type, "lt80ami_ui" = "UI Recipient Households", "lt80ami_noui" = "UI Non-Recipient Households")) %>% 
-  select(city, type, starts_with("renter_households"), starts_with("lost_wages_agg"), starts_with("ui_benefits_reg"), starts_with("ui_benefits_all"))
+  select(county_name, type, starts_with("renter_households"), starts_with("lost_wages_agg"), starts_with("ui_benefits_reg"), starts_with("ui_benefits_all"))
 
 
 table_2 <- table2_data %>% 
-  gt(rowname_col = "city", groupname_col = "type") %>% 
+  gt(rowname_col = "county_name", groupname_col = "type") %>% 
   tab_spanner("Renter Households below 80% AMI with job loss", starts_with("renter_households")) %>%   
   tab_spanner("Total Lost Wages (Monthly)", starts_with("lost_wages_agg")) %>% 
   tab_spanner("Total Standard UI Benefits (Monthly)", starts_with("ui_benefits_reg")) %>% 
@@ -469,9 +469,9 @@ prep_table3_data <- function(.data) {
     pull(pop_renter_num)
   
   table3_pop <- .data %>% 
-    filter(!is.na(city)) %>% 
+    filter(!is.na(county_name)) %>% 
     as_survey_design(weights = perwt) %>% 
-    group_by(city) %>% 
+    group_by(county_name) %>% 
     summarise(
       pop_num = survey_total_ci90(1),
       pop_renter_num = survey_total_ci90(is_renter)
@@ -481,18 +481,18 @@ prep_table3_data <- function(.data) {
     )
   
   table3_renter_pct <- .data %>% 
-    filter(!is.na(city), pernum == 1) %>% 
+    filter(!is.na(county_name), pernum == 1) %>% 
     as_survey_design(weights = hhwt) %>% 
-    group_by(city) %>% 
+    group_by(county_name) %>% 
     summarise(
       hh_renter_num = survey_total_ci90(is_renter),
       hh_renter_pct = survey_mean_ci90(is_renter),
     )
   
   table3_renter_stats <- .data %>% 
-    filter(!is.na(city), pernum == 1, is_renter) %>% 
+    filter(!is.na(county_name), pernum == 1, is_renter) %>% 
     as_survey_design(weights = hhwt) %>% 
-    group_by(city) %>% 
+    group_by(county_name) %>% 
     summarise(
       hh_rent_burden_sev_num = survey_total_ci90(is_rent_burdened_sev, na.rm = TRUE),
       hh_rent_burden_sev_pct = survey_mean_ci90(is_rent_burdened_sev, na.rm = TRUE),
@@ -503,19 +503,19 @@ prep_table3_data <- function(.data) {
   table3_data <- list(
     table3_pop, table3_renter_pct, table3_renter_stats
     ) %>% 
-    reduce(left_join, by = "city")
+    reduce(left_join, by = "county_name")
 }
 
-table3_data_cities <- prep_table3_data(ipums_clean)
+table3_data_counties <- prep_table3_data(ipums_clean)
 
-table3_data_all_cities <- ipums_clean %>% 
-  mutate(city = if_else(!is.na(city), "Total", city)) %>% 
+table3_data_all_counties <- ipums_clean %>% 
+  mutate(county_name = if_else(!is.na(county_name), "Total", county_name)) %>% 
   prep_table3_data()
 
-table3_data <- bind_rows(table3_data_cities, table3_data_all_cities) %>% 
+table3_data <- bind_rows(table3_data_counties, table3_data_all_counties) %>% 
   add_moe() %>% 
-  mutate(city = factor(city, levels = city_order)) %>% 
-  arrange(city) %>% 
+  mutate(county_name = factor(county_name, levels = county_order)) %>% 
+  arrange(county_name) %>% 
   # in final tables we leave some variables out, but keep them here commented
   # out since they are useful to have for reference in the text
   select(-starts_with("pop_renter_num"), -starts_with("pop_renter_nys_pct"))
@@ -524,7 +524,7 @@ table3_data <- bind_rows(table3_data_cities, table3_data_all_cities) %>%
 
 ```{r table3-table}
 table_3 <- table3_data %>% 
-  gt(rowname_col = "city") %>% 
+  gt(rowname_col = "county_name") %>% 
   tab_spanner("Total Population", 
               starts_with("pop_num")) %>% 
   tab_spanner("Renter Households", 
@@ -566,8 +566,8 @@ person_results_multi <- seq_len(ITERATIONS) %>%
         add_need_vars() %>% 
         as_survey_design(weights = perwt)
       
-      city_data <- data_w_vars %>% 
-        group_by(city) %>% 
+      county_data <- data_w_vars %>% 
+        group_by(county_name) %>% 
         summarise(
           # Renters only:
           
@@ -585,7 +585,7 @@ person_results_multi <- seq_len(ITERATIONS) %>%
         ungroup() %>% 
         mutate(seed = seed)
       
-      all_cities_data <- data_w_vars %>% 
+      all_counties_data <- data_w_vars %>% 
         summarise(
           pop_num = survey_total_ci90(1),
           wage_earners_num = survey_total_ci90(inc_wages > 0, na.rm = TRUE),
@@ -594,18 +594,18 @@ person_results_multi <- seq_len(ITERATIONS) %>%
         ) %>% 
         mutate(
           seed = seed,
-          city = "Total"
+          county_name = "Total"
         )
       
-      bind_rows(city_data, all_cities_data)
+      bind_rows(county_data, all_counties_data)
         
     },
-    .data = filter(ipums_clean, !is.na(city), is_renter)
+    .data = filter(ipums_clean, !is.na(county_name), is_renter)
   )
 
 person_results <- person_results_multi %>% 
   select(-seed) %>% 
-  group_by(city) %>% 
+  group_by(county_name) %>% 
   summarise_all(mean)
 
 
@@ -614,11 +614,11 @@ person_results <- person_results_multi %>%
 ```{r table4-table}
 person_table_data <- person_results %>% 
   add_moe() %>% 
-  mutate(city = factor(city, levels = city_order)) %>% 
-  arrange(city)
+  mutate(county_name = factor(county_name, levels = county_order)) %>% 
+  arrange(county_name)
 
 table_4 <- person_table_data %>% 
-  gt(rowname_col = "city") %>% 
+  gt(rowname_col = "county_name") %>% 
   tab_spanner("Renter Population", starts_with("pop_num")) %>% 
   tab_spanner("Number of Wage Earning Renters", starts_with("wage_earners_num")) %>% 
   tab_spanner("Number of Wage Earning Renters Estimated to Lose Income Due to Job Loss", starts_with("risk_earners_num")) %>% 
@@ -648,7 +648,7 @@ size_summarise_stats <- function(.data) {
       is_renter    # keep only renter households
     ) %>% 
     as_survey_design(weights = hhwt) %>%
-    group_by(city, bldg_size, .drop = FALSE) %>%
+    group_by(county_name, bldg_size, .drop = FALSE) %>%
     summarise(households = survey_total(vartype = "ci", level = 0.90))
   
   size_totals <- size_data %>%
@@ -656,7 +656,7 @@ size_summarise_stats <- function(.data) {
       households_moe = households_upp - households,
       households_moe_sqr = households_moe^2
     ) %>%
-    group_by(city) %>% 
+    group_by(county_name) %>% 
     summarize(
       total = sum(households),
       total_moe = sqrt(sum(households_moe_sqr))
@@ -664,7 +664,7 @@ size_summarise_stats <- function(.data) {
     ungroup()
   
   size_rates <- size_data %>%
-    left_join(size_totals, by = "city") %>% 
+    left_join(size_totals, by = "county_name") %>% 
     mutate(
       households_moe = households_upp - households,
       share = households / total,
@@ -672,7 +672,7 @@ size_summarise_stats <- function(.data) {
       share_low = share - share_moe,
       share_upp = share + share_moe
     ) %>%
-    select(city, bldg_size, share, share_low, share_upp)
+    select(county_name, bldg_size, share, share_low, share_upp)
   
   size_rates
 }
@@ -703,16 +703,16 @@ size_data_multi <- seq_len(ITERATIONS) %>%
         mutate(seed = seed)
         
     },
-    .data = filter(ipums_clean, !is.na(city), is_renter)
+    .data = filter(ipums_clean, !is.na(county_name), is_renter)
   )
 
 size_data <- size_data_multi %>% 
   select(-seed) %>% 
-  group_by(city, type, bldg_size) %>% 
+  group_by(county_name, type, bldg_size) %>% 
   summarise_all(mean) %>% 
   ungroup() %>% 
-  mutate(city = factor(city, levels = city_order)) %>% 
-  arrange(city, desc(type), bldg_size)
+  mutate(county_name = factor(county_name, levels = county_order)) %>% 
+  arrange(county_name, desc(type), bldg_size)
 ```
 
 
@@ -729,7 +729,7 @@ fig_1 <- size_data %>%
     y_format = "percent"
   ) +
   scale_fill_manual(values = c("#2c7fb8", "#98e2c9")) +
-  lemon::facet_rep_wrap(~city, ncol = 2, repeat.tick.labels = 'bottom') +
+  lemon::facet_rep_wrap(~county_name, ncol = 2, repeat.tick.labels = 'bottom') +
   labs(
     title = str_glue(
       "Distribution of renter households across building sizes, by job/income loss"
@@ -767,7 +767,7 @@ prep_table5_data <- function(seed, .data) {
       hh_any_risk # keep only vulnerable households
     ) %>%
     as_survey_design(weights = hhwt) %>%
-    group_by(city) %>%
+    group_by(county_name) %>%
     summarise(
       renter_households = survey_total_ci90(1),
       rent_monthly_tot = survey_total_ci90(gross_rent_nom, na.rm = TRUE),
@@ -782,36 +782,36 @@ prep_table5_data <- function(seed, .data) {
 }
 
 
-renter_1_4_stats_cities <- seq_len(ITERATIONS) %>%
+renter_1_4_stats_counties <- seq_len(ITERATIONS) %>%
   future_map_dfr(
     .f = prep_table5_data,
     .data = ipums_clean %>% 
-      filter(!is.na(city), is_renter, bldg_size %in% c("1", "2-4"))
+      filter(!is.na(county_name), is_renter, bldg_size %in% c("1", "2-4"))
   )
 
-renter_1_4_stats_all_cities <- seq_len(ITERATIONS) %>%
+renter_1_4_stats_all_counties <- seq_len(ITERATIONS) %>%
   future_map_dfr(
     .f = prep_table5_data,
     .data = ipums_clean %>% 
-      filter(!is.na(city), is_renter, bldg_size %in% c("1", "2-4")) %>% 
-        mutate(city = if_else(!is.na(city), "Total", city))
+      filter(!is.na(county_name), is_renter, bldg_size %in% c("1", "2-4")) %>% 
+        mutate(county_name = if_else(!is.na(county_name), "Total", county_name))
   )
 
-table5_data <- renter_1_4_stats_cities %>% 
-  bind_rows(renter_1_4_stats_all_cities) %>% 
+table5_data <- renter_1_4_stats_counties %>% 
+  bind_rows(renter_1_4_stats_all_counties) %>% 
   select(-seed) %>% 
-  group_by(city) %>% 
+  group_by(county_name) %>% 
   summarise_all(mean) %>% 
   ungroup() %>% 
   add_moe() %>% 
-  mutate(city = factor(city, levels = city_order)) %>% 
-  arrange(city)
+  mutate(county_name = factor(county_name, levels = county_order)) %>% 
+  arrange(county_name)
       
 ```
 
 ```{r table5-table}
 table_5 <- table5_data %>% 
-  gt(rowname_col = "city") %>% 
+  gt(rowname_col = "county_name") %>% 
   tab_spanner("Renter Households in 1-4 Unit Properties", 
               starts_with("renter_households")) %>% 
   tab_spanner("Total Rent (Monthly)", starts_with("rent_monthly_tot")) %>%
@@ -850,7 +850,7 @@ need_summarise_stats <- function(.data) {
       hh_any_risk  # keep only vulnerable households
     ) %>% 
     as_survey_design(weights = hhwt) %>% 
-    group_by(city) %>% 
+    group_by(county_name) %>% 
     summarise(
       rent_need_tot_monthly = survey_total_ci90(risk_rent_need),
       rent_need_ui_reg_tot_monthly = survey_total_ci90(risk_rent_need_ui_reg),
@@ -895,31 +895,31 @@ prep_need_data <- function(seed, .data) {
     
 }
 
-need_data_multi_cities <- seq_len(ITERATIONS) %>%
+need_data_multi_counties <- seq_len(ITERATIONS) %>%
   future_map_dfr(
     .f = prep_need_data,
-    .data = ipums_clean %>% filter(!is.na(city), is_renter)
+    .data = ipums_clean %>% filter(!is.na(county_name), is_renter)
   )
 
-need_data_multi_all_cities <- seq_len(ITERATIONS) %>%
+need_data_multi_all_counties <- seq_len(ITERATIONS) %>%
   future_map_dfr(
     .f = prep_need_data,
     .data = ipums_clean %>% 
-      filter(!is.na(city), is_renter) %>% 
-      mutate(city = "Total")
+      filter(!is.na(county_name), is_renter) %>% 
+      mutate(county_name = "Total")
   )
 
-need_data <- need_data_multi_cities %>% 
-  bind_rows(need_data_multi_all_cities) %>% 
+need_data <- need_data_multi_counties %>% 
+  bind_rows(need_data_multi_all_counties) %>% 
   select(-seed) %>% 
-  group_by(city, type) %>% 
+  group_by(county_name, type) %>% 
   summarise_all(mean) %>% 
   ungroup()
 
 need_table_data <- need_data %>% 
   add_moe() %>% 
-  mutate(city = factor(city, levels = city_order)) %>% 
-  arrange(city, desc(type))
+  mutate(county_name = factor(county_name, levels = county_order)) %>% 
+  arrange(county_name, desc(type))
 ```
 
 ### Table 6
@@ -931,7 +931,7 @@ table6_data <- need_table_data %>%
 
 
 table_6 <- table6_data %>% 
-  gt(rowname_col = "city", groupname_col = "type") %>% 
+  gt(rowname_col = "county_name", groupname_col = "type") %>% 
   tab_spanner("No UI Benefits (Monthly)", starts_with("rent_need_tot_monthly")) %>% 
   tab_spanner("Standard UI Benefits (Monthly)", starts_with("rent_need_ui_reg_tot_monthly")) %>% 
   tab_spanner("Standard Plus $300/week Enhanced UI Benefits (Monthly)", starts_with("rent_need_ui_all300_tot_monthly")) %>% 
@@ -957,11 +957,11 @@ table_6
 table7_data <- need_table_data %>% 
   filter(type %in% c("all_default", "lt80ami_default")) %>% 
   mutate(type = recode(type, "all_default" = "All households", "lt80ami_default" = "Households with pre-COVID income below 80% AMI")) %>% 
-  arrange(city, type)
+  arrange(county_name, type)
 
 
 table_7 <- table7_data %>% 
-  gt(rowname_col = "city", groupname_col = "type") %>% 
+  gt(rowname_col = "county_name", groupname_col = "type") %>% 
   tab_spanner("No UI Benefits (Monthly)", starts_with("rent_need_tot_monthly")) %>% 
   tab_spanner("Standard UI Benefits (Monthly)", starts_with("rent_need_ui_reg_tot_monthly")) %>% 
   tab_spanner("Standard Plus $300/week Enhanced UI Benefits (Monthly)", starts_with("rent_need_ui_all300_tot_monthly")) %>% 
@@ -986,7 +986,7 @@ There are just a couple simple stats that are helpful to have, and as long as th
 
 ```{r}
 ipums_clean %>% 
-  filter(pernum == 1, !is.na(city)) %>% 
+  filter(pernum == 1, !is.na(county_name)) %>% 
   as_survey_design(weights = hhwt) %>% 
   summarise(
     total_households = survey_total_ci90(1)

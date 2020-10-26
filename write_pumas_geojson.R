@@ -97,8 +97,7 @@ puma_household_data <- seq_len(ITERATIONS) %>%
     .f = prep_household_data,
     .data = filter(ipums_clean, is_renter)
   )
-  
-  
+
 
 puma_pop <- ipums_clean %>% 
   as_survey_design(weights = perwt) %>% 
@@ -131,7 +130,7 @@ puma_renter_stats <- ipums_clean %>%
 puma_data <- list(
   puma_pop, puma_household_data, puma_renter_pct, puma_renter_stats
 ) %>% 
-  reduce(left_join, by = "puma") %>%
+  # reduce(left_join, by = "puma") %>%
   select(!ends_with(c("_low", "_upp")))
 
 pumas <- left_join(pumas, puma_data) %>%
