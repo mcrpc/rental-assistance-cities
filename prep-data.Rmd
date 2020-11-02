@@ -35,13 +35,15 @@ options(scipen = 999)
 
 
 ```{r r-sources}
-# Script to prepare BLS data
+# Script to prepare BLS data 
+# modified to use Illinois dataset
 source("bls-emp-il.R")
 
 # Load function ind_to_bls() to recode IPUMS ind codes to BLS ones we're using
 source("R/ind_to_bls.R")
 
 # Script to prepare renter adjustment factor
+# modified to use Illinois IPUMS dataset ("usa_00001.dat")
 source("renter_unemp_adj.R")
 ```
 
@@ -113,9 +115,6 @@ ipums_raw <- read_ipums_ddi("data/usa_00001.xml") %>%
   read_ipums_micro(verbose = FALSE, var_attrs = NULL) %>%
   rename_with(str_to_lower) %>%
   mutate_if(is.integer, as.double)
-
-# ipums_raw2 <- read_csv("data/ipums_acs-2018-1yr_ny.csv.gz") %>%
-#   rename_with(str_to_lower)
 ```
 
 
@@ -139,14 +138,13 @@ ipums_clean <- ipums_raw %>%
   mutate(ind_group_bls = ind_to_bls(ind)) %>% 
   left_join(bls_ind_job_loss, by = "ind_group_bls") %>%
   mutate(
-    # Define cities
+    # Define counties
 
-    # These cities were selected as example for this analysis and manually
+    # These counties were selected as example for this analysis and manually
     # matched to the relevant PUMAs. To replicate this analysis elsewhere it's
     # recommended to use the website Geocorr referenced above to match areas
     # of interest to PUMAs.
     county_name = case_when(
-      # county %in% c(5, 47, 61, 81, 85) ~ "New York City",
       # puma %in% c(0105) ~ "Rock Island",
       # puma %in% c(1104, 1105) ~ "St. Clair",
       # puma %in% c(1204, 1205) ~ "Madison",
@@ -194,7 +192,7 @@ ipums_clean <- ipums_raw %>%
     
     # UI benefits
     # https://eligibility.com/unemployment/illinois-il-unemployment-benefits
-    # These are set using the NY state eligibility criteria, and will need to
+    # These are set using the IL state eligibility criteria, and will need to
     # be adjusted for local details 
     # NOTE: These are adjusted in a subsequent process based on job loss assumptions
     inc_wages_qtr = inc_wages/4,
