@@ -23,7 +23,7 @@ bls_ind <- tribble(
   "90000000", "Government"
 )
 
-# Create a dataframe with all of the compoents of the series codes we will need to download
+# Create a dataframe with all of the components of the series codes we will need to download
 bls_series_info <- tibble(
   prefix = "SM", # State/Metro Data
   sa = "U", # Not Seasonally Adjusted
