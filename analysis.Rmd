@@ -103,7 +103,7 @@ Not every person who losses their job will receive unemployment insurance. The r
 
 While we can test for income eligibility in the data, we have to rely on this assumption about overall take up rate to account the other factors in our analysis.
 
-For this analysis we are following the work from [The Century Foundation](https://tcf.org/content/commentary/covid-stimulus-3-0-ui-reaction) and using a UI recipiency rate of `r percent(UI_TAKEUP_RATE)` for New York State.
+For this analysis we are following the work from [The Century Foundation](https://tcf.org/content/commentary/covid-stimulus-3-0-ui-reaction) and using a UI recipiency rate of `r percent(UI_TAKEUP_RATE)` for Illinois State.
 
 
 ### Analysis Functions
