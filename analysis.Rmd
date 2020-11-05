@@ -90,7 +90,9 @@ In our analysis we randomly assign individuals in the data to job loss status an
 
 ```{r ui-takeup-rate}
 # Assumption about % of people who lost jobs that will receive UI benefits
-UI_TAKEUP_RATE <- 0.67
+# https://tcf.org/content/commentary/covid-stimulus-3-0-ui-reaction/
+# used the weighted nationwide average of 64 percent
+UI_TAKEUP_RATE <- 0.64
 ```
 
 Not every person who losses their job will receive unemployment insurance. The reasons for this include:  
