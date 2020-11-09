@@ -462,8 +462,8 @@ table_2
 ```{r table3-data}
 
 prep_table3_data <- function(.data) {
-  # total renter population in NY state
-  nys_renter_pop_num <- .data %>% 
+  # total renter population in IL state
+  ils_renter_pop_num <- .data %>% 
     as_survey_design(weights = perwt) %>% 
     summarise(
       pop_renter_num = survey_total_ci90(1)
@@ -479,7 +479,7 @@ prep_table3_data <- function(.data) {
       pop_renter_num = survey_total_ci90(is_renter)
     ) %>% 
     mutate(
-      pop_renter_nys_pct = pop_renter_num / nys_renter_pop_num
+      pop_renter_ils_pct = pop_renter_num / ils_renter_pop_num
     )
   
   table3_renter_pct <- .data %>% 
@@ -520,7 +520,7 @@ table3_data <- bind_rows(table3_data_counties, table3_data_all_counties) %>%
   arrange(county_name) %>% 
   # in final tables we leave some variables out, but keep them here commented
   # out since they are useful to have for reference in the text
-  select(-starts_with("pop_renter_num"), -starts_with("pop_renter_nys_pct"))
+  select(-starts_with("pop_renter_num"), -starts_with("pop_renter_ils_pct"))
 ```
 
 
