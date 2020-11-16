@@ -91,7 +91,7 @@ add_need_vars <- function(.data) {
       hh_any_risk = case_when(
         all(is.na(risk_group)) ~ NA, # no wage earners
         any(risk_group, na.rm = TRUE) ~ TRUE, # any wage earners are at risk
-        all(!risk_group, na.rm = TRUE) ~ FALSE # all wage earners are at NOT at risk
+        all(!risk_group, na.rm = TRUE) ~ FALSE # all wage earners are NOT at risk
       ),
       
       # The total wages for each household that come from vulnerable occupations
