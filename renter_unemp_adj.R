@@ -1,6 +1,7 @@
 library(tidyverse)
 library(fs)
 library(srvyr)
+library(ipumsr)
 
 
 # Load function ind_to_bls() to recode IPUMS ind codes to BLS ones we're using
@@ -8,11 +9,15 @@ source(path("R", "ind_to_bls.R"))
 
 
 # Read in IPUMS USA ACS microdata, standardize the column names
-ipums_raw <- read_ipums_ddi("data/usa_00001.xml") %>%
+ipums_raw <- read_ipums_ddi("data/usa_00002.xml") %>%
   read_ipums_micro() %>%
-  rename_with(str_to_lower)
+  rename_with(str_to_lower) %>%
+  filter(sample == 201803, statefip == 17)
 
-# Add column with BLS indistry categories, filter to relevent universe, set up
+# it is necessary to run R's garbage collection after loading the IPUMS data
+gc()
+
+# Add column with BLS industry categories, filter to relevant universe, set up
 # survey weights
 unemp_data <- ipums_raw %>% 
   mutate(ind_group_bls = ind_to_bls(ind)) %>% 

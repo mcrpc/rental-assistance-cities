@@ -51,26 +51,38 @@ add_moe <- function(.data) {
     pivot_wider(names_from = name_type, values_from = value)
 }
 
-hh_summarise_stats <- function(.data) {
+pop_summarize_stats <- function(.data) {
+  .data %>%
+    as_survey_design(weights = perwt) %>%
+    group_by(county_name) %>%
+    summarize(
+      pop_num = survey_total_ci90(1),
+      wage_earners_num = survey_total_ci90(inc_wages > 0, na.rm = TRUE),
+      risk_earners_num = survey_total_ci90(risk_group, na.rm = TRUE)
+    ) %>%
+    ungroup()
+}
+
+hh_summarize_stats <- function(.data) {
   .data %>%  
     filter(
       pernum == 1 # keep only one row per household
     ) %>% 
     as_survey_design(weights = hhwt) %>% 
     group_by(county_name) %>%
-    summarise(
+    summarize(
       households = survey_total_ci90(1),
       lost_wages_agg_monthly = survey_total_ci90(hh_risk_wages/12),
       ui_benefits_reg_agg_monthly = survey_total_ci90(hh_ui_benefits_month_reg),
-      ui_benefits_extra300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_extra300),
-      ui_benefits_all300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_all300),
+      # ui_benefits_extra300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_extra300),
+      # ui_benefits_all300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_all300),
       rent_monthly_tot = survey_total_ci90(gross_rent_nom, na.rm = TRUE),
       rent_monthly_avg = survey_mean_ci90(gross_rent_nom, na.rm = TRUE)
     ) %>% 
     ungroup()
 }
 
-vuln_summarise_stats <- function(.data) {
+vuln_summarize_stats <- function(.data) {
   .data %>%  
     filter(
       pernum == 1, # keep only one row per household
@@ -78,17 +90,17 @@ vuln_summarise_stats <- function(.data) {
     ) %>% 
     as_survey_design(weights = hhwt) %>% 
     group_by(county_name) %>%
-    summarise(
+    summarize(
       households = survey_total_ci90(1),
       lost_wages_agg_monthly = survey_total_ci90(hh_risk_wages/12),
       ui_benefits_reg_agg_monthly = survey_total_ci90(hh_ui_benefits_month_reg),
-      ui_benefits_extra300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_extra300),
-      ui_benefits_all300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_all300),
+      # ui_benefits_extra300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_extra300),
+      # ui_benefits_all300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_all300),
       rent_monthly_tot = survey_total_ci90(gross_rent_nom, na.rm = TRUE),
       rent_monthly_avg = survey_mean_ci90(gross_rent_nom, na.rm = TRUE),
       rent_need_tot_monthly = survey_total_ci90(risk_rent_need),
       rent_need_ui_reg_tot_monthly = survey_total_ci90(risk_rent_need_ui_reg),
-      rent_need_ui_all300_tot_monthly = survey_total_ci90(risk_rent_need_ui_all300)
+      # rent_need_ui_all300_tot_monthly = survey_total_ci90(risk_rent_need_ui_all300)
     ) %>% 
     ungroup()
 }
@@ -101,7 +113,7 @@ ui_percent_stats <- function(.data) {
     ) %>% 
     as_survey_design(weights = hhwt) %>% 
     group_by(county_name) %>% 
-    summarise(
+    summarize(
       renter_hh_ui_pct = survey_mean_ci90(hh_any_risk & hh_ui_benefits_month_reg > 0),
       renter_hh_noui_pct = survey_mean_ci90(!is.na(hh_any_risk) & hh_any_risk & hh_ui_benefits_month_reg == 0)
     )
@@ -116,17 +128,28 @@ prep_hh_data <- function(seed, .data) {
     add_need_vars()
   
   data_renter_vuln <- data_w_need %>%
-    filter(is_renter) %>%
-    vuln_summarise_stats() %>% 
+    filter(is_renter, hh_any_risk) %>%
+    pop_summarize_stats() %>%
+    left_join(
+      data_w_need %>% 
+        filter(is_renter, hh_any_risk) %>% 
+        vuln_summarize_stats()
+    ) %>%
     mutate(
-      group = "renter",
+      group = "renter", 
       status = "vulnerable"
     )
+
   
   data_renter_vuln_sevburden <- data_w_need %>%
     # Include only those who were severely rent burdened pre-covid
-    filter(is_rent_burdened_sev, is_renter) %>%
-    vuln_summarise_stats() %>% 
+    filter(is_rent_burdened_sev, is_renter, hh_any_risk) %>%
+    pop_summarize_stats() %>%
+    left_join(
+      data_w_need %>%
+        filter(is_rent_burdened_sev, is_renter, hh_any_risk) %>%
+        vuln_summarize_stats()
+    ) %>%
     mutate(
       group = "renter",
       type = "sevburden",
@@ -135,8 +158,13 @@ prep_hh_data <- function(seed, .data) {
   
   data_renter_vuln_noui <- data_w_need %>%
     # Include only those who don't get UI benefits
-    filter(hh_ui_benefits_month_reg == 0, is_renter) %>%
-    vuln_summarise_stats() %>% 
+    filter(hh_ui_benefits_month_reg == 0, is_renter, hh_any_risk) %>%
+    pop_summarize_stats() %>% 
+    left_join(
+      data_w_need %>%
+        filter(hh_ui_benefits_month_reg == 0, is_renter, hh_any_risk) %>%
+        vuln_summarize_stats()
+    ) %>%
     mutate(
       group = "renter",
       type = "noui",
@@ -145,8 +173,13 @@ prep_hh_data <- function(seed, .data) {
   
   data_renter_vuln_ui <- data_w_need %>%
     # Include only those who did get UI benefits
-    filter(hh_ui_benefits_month_reg > 0, is_renter) %>%
-    vuln_summarise_stats() %>% 
+    filter(hh_ui_benefits_month_reg > 0, is_renter, hh_any_risk) %>%
+    pop_summarize_stats() %>% 
+    left_join(
+      data_w_need %>%
+        filter(hh_ui_benefits_month_reg > 0, is_renter, hh_any_risk) %>%
+        vuln_summarize_stats()
+    ) %>%
     mutate(
       group = "renter",
       type = "ui",
@@ -155,24 +188,28 @@ prep_hh_data <- function(seed, .data) {
   
   data_renter_vuln_lt80ami <- data_w_need %>%
     # Include only households with income below 80% AMI
-    filter(hh_inc_nom > hud_inc_lim80, is_renter) %>% 
-    vuln_summarise_stats() %>% 
+    filter(hh_inc_nom > hud_inc_lim80, is_renter, hh_any_risk) %>% 
+    pop_summarize_stats() %>% 
+    left_join(
+      data_w_need %>%
+        # Include only households with income below 80% AMI
+        filter(hh_inc_nom > hud_inc_lim80, is_renter, hh_any_risk) %>% 
+        vuln_summarize_stats()
+    ) %>%
     mutate(
       group = "renter",
       type = "lt80ami",
       status = "vulnerable"
     )
   
-  data_renter_sevburden <- data_w_need %>%
-    filter(is_rent_burdened_sev, is_renter) %>%
-    hh_summarise_stats() %>%
-    mutate(
-      group = "renter"
-    )
-  
   data_renter_all <- data_w_need %>%
     filter(is_renter) %>%
-    hh_summarise_stats() %>%
+    pop_summarize_stats() %>%
+    left_join(
+      data_w_need %>%
+        filter(is_renter) %>%
+        hh_summarize_stats
+    ) %>%
     mutate(
       group = "renter"
     )
@@ -180,7 +217,13 @@ prep_hh_data <- function(seed, .data) {
   data_renter_all_sevburden <- data_w_need %>%
     # Include only those who were severely rent burdened pre-covid
     filter(is_rent_burdened_sev, is_renter) %>%
-    hh_summarise_stats() %>% 
+    pop_summarize_stats() %>% 
+    left_join(
+      data_w_need %>%
+        # Include only those who were severely rent burdened pre-covid
+        filter(is_rent_burdened_sev, is_renter) %>%
+        hh_summarize_stats()
+    ) %>%
     mutate(
       group = "renter",
       type = "sevburden"
@@ -189,10 +232,35 @@ prep_hh_data <- function(seed, .data) {
   data_renter_all_lt80ami <- data_w_need %>%
     # Include only households with income below 80% AMI
     filter(hh_inc_nom > hud_inc_lim80, is_renter) %>% 
-    hh_summarise_stats() %>% 
+    pop_summarize_stats() %>% 
+    left_join(
+      data_w_need %>%
+        # Include only households with income below 80% AMI
+        filter(hh_inc_nom > hud_inc_lim80, is_renter) %>% 
+        hh_summarize_stats() 
+    ) %>%
     mutate(
       group = "renter",
       type = "lt80ami"
+    )
+  
+  data_owner_all <- data_w_need %>%
+    filter(!is_renter) %>%
+    pop_summarize_stats() %>%
+    left_join(
+      data_w_need %>%
+        filter(!is_renter) %>%
+        hh_summarize_stats()
+    ) %>%
+    mutate(
+      group = "owner"
+    )
+  
+  data_all <- data_w_need %>%
+    pop_summarize_stats() %>%
+    left_join(
+      data_w_need %>%
+        hh_summarize_stats()
     )
   
   bind_rows(
@@ -203,7 +271,9 @@ prep_hh_data <- function(seed, .data) {
     data_renter_vuln_lt80ami,
     data_renter_all,
     data_renter_all_sevburden,
-    data_renter_all_lt80ami
+    data_renter_all_lt80ami,
+    data_owner_all,
+    data_all
   ) %>% 
     mutate(seed = seed)
   
@@ -224,7 +294,7 @@ person_results <- seq_len(ITERATIONS) %>%
       
       county_data <- data_w_vars %>% 
         group_by(county_name) %>% 
-        summarise(
+        summarize(
           # Renters only:
           
           pop_num = survey_total_ci90(1),
@@ -245,7 +315,7 @@ person_results <- seq_len(ITERATIONS) %>%
     .data = filter(ipums_clean, !is.na(county_name), is_renter)
   )
 
-need_summarise_stats <- function(.data) {
+need_summarize_stats <- function(.data) {
   .data %>%  
     filter(
       pernum == 1, # keep only one row per household
@@ -253,7 +323,7 @@ need_summarise_stats <- function(.data) {
     ) %>%
     as_survey_design(weights = hhwt) %>% 
     group_by(county_name) %>% 
-    summarise(
+    summarize(
       rent_need_tot_monthly = survey_total_ci90(risk_rent_need),
       rent_need_ui_reg_tot_monthly = survey_total_ci90(risk_rent_need_ui_reg),
       rent_need_ui_all300_tot_monthly = survey_total_ci90(risk_rent_need_ui_all300),
@@ -272,19 +342,19 @@ prep_need_data <- function(seed, .data) {
   
   data_all_default <- data_w_vars %>% 
     add_need_vars() %>%
-    need_summarise_stats()
+    need_summarize_stats()
   
   data_all_30cutoff <- data_w_vars %>% 
     mutate(target_burden = 0.30) %>%
     add_need_vars() %>%
-    need_summarise_stats()
+    need_summarize_stats()
   
   
   data_lt80ami_default <- data_w_vars %>% 
     # Include only households with income below 80% AMI
     filter(hh_inc_nom > hud_inc_lim80) %>% 
     add_need_vars() %>%
-    need_summarise_stats()
+    need_summarize_stats()
   
   
   bind_rows(
@@ -312,12 +382,12 @@ hh_data <- seq_len(ITERATIONS) %>%
   add_moe() %>%
   arrange(county_name, desc(type)) %>% 
   filter(county_name == "McLean") %>%
-  write_csv("data/mclean_hh_data.csv")
+  write_csv("data/mclean_hh_data_201803.csv", na = "")
 
 # person_data <- person_results %>% 
 #   select(-seed) %>% 
 #   group_by(county_name) %>% 
-#   summarise_all(mean) %>%
+#   summarize_all(mean) %>%
 #   add_moe() %>% 
 #   filter(county_name == "McLean") %>%
 #   write_csv("data/mclean_person_data.csv")
@@ -329,7 +399,7 @@ hh_data <- seq_len(ITERATIONS) %>%
 #   ) %>%
 #   select(-seed) %>%
 #   group_by(county_name, type) %>%
-#   summarise_all(mean) %>%
+#   summarize_all(mean) %>%
 #   ungroup() %>%
 #   add_moe() %>%
 #   arrange(county_name, desc(type)) %>%

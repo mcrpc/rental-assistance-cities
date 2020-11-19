@@ -31,13 +31,13 @@ bls_series_info <- tibble(
   area = "00000", # all of IL
   data_type = "01", # All Employees, In Thousands,
 ) %>% 
-  bind_cols(bls_ind) %>% 
+  bind_cols(bls_ind) %>%
   mutate(series_code = str_c(prefix, sa, state, area, supersector_industry, data_type))
 
 # Structure the series codes into the format required by {blsAPI}
 bls_api_info <- list(
   seriesid = pull(bls_series_info, series_code),
-  startyear = "2020",
+  startyear = "2019",
   endyear = "2020"
 )
 
@@ -66,11 +66,11 @@ bls_emp_long <- map2_dfr(
 # with the full series code components, then calculate the percent job loss by
 # industry
 bls_emp_clean <-  bls_emp_long %>% 
-  filter(month %in% c("02", "08")) %>%  # pre-covid, and most recent month available
+  filter(month %in% c("09")) %>%  # sept 2019 vs sept 2020
   unite(year_month, year, month) %>% 
   pivot_wider(values_from = value, names_from = year_month, names_prefix = "emp_") %>% 
   left_join(bls_series_info, by = "series_code") %>% 
-  mutate(unemp_chg_pct = (emp_2020_08 - emp_2020_02) / emp_2020_02) %>% 
+  mutate(unemp_chg_pct = (emp_2020_09 - emp_2019_09) / emp_2019_09) %>% 
   select(
     series_code,
     prefix,
@@ -80,8 +80,8 @@ bls_emp_clean <-  bls_emp_long %>%
     supersector_industry,
     data_type,
     bls_ind_name,
-    emp_2020_02,
-    emp_2020_08,
+    emp_2019_09,
+    emp_2020_09,
     unemp_chg_pct
   )
 
