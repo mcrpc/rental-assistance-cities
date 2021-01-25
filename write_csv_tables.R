@@ -74,8 +74,8 @@ hh_summarize_stats <- function(.data) {
       households = survey_total_ci90(1),
       lost_wages_agg_monthly = survey_total_ci90(hh_risk_wages/12),
       ui_benefits_reg_agg_monthly = survey_total_ci90(hh_ui_benefits_month_reg),
-      # ui_benefits_extra300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_extra300),
-      # ui_benefits_all300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_all300),
+      ui_benefits_extra300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_extra300),
+      ui_benefits_all300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_all300),
       rent_monthly_tot = survey_total_ci90(gross_rent_nom, na.rm = TRUE),
       rent_monthly_avg = survey_mean_ci90(gross_rent_nom, na.rm = TRUE)
     ) %>% 
@@ -94,13 +94,13 @@ vuln_summarize_stats <- function(.data) {
       households = survey_total_ci90(1),
       lost_wages_agg_monthly = survey_total_ci90(hh_risk_wages/12),
       ui_benefits_reg_agg_monthly = survey_total_ci90(hh_ui_benefits_month_reg),
-      # ui_benefits_extra300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_extra300),
-      # ui_benefits_all300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_all300),
+      ui_benefits_extra300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_extra300),
+      ui_benefits_all300_agg_monthly = survey_total_ci90(hh_ui_benefits_month_all300),
       rent_monthly_tot = survey_total_ci90(gross_rent_nom, na.rm = TRUE),
       rent_monthly_avg = survey_mean_ci90(gross_rent_nom, na.rm = TRUE),
       rent_need_tot_monthly = survey_total_ci90(risk_rent_need),
       rent_need_ui_reg_tot_monthly = survey_total_ci90(risk_rent_need_ui_reg),
-      # rent_need_ui_all300_tot_monthly = survey_total_ci90(risk_rent_need_ui_all300)
+      rent_need_ui_all300_tot_monthly = survey_total_ci90(risk_rent_need_ui_all300)
     ) %>% 
     ungroup()
 }

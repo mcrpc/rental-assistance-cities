@@ -10,7 +10,7 @@
 
 
 
-<meta name="date" content="2020-11-19" />
+<meta name="date" content="2021-01-04" />
 
 <title>Prepare data for analysis</title>
 
@@ -483,7 +483,7 @@ summary {
 
 <h1 class="title toc-ignore">Prepare data for analysis</h1>
 <h3 class="subtitle">NYU Furman Center</h3>
-<h4 class="date">2020-11-19</h4>
+<h4 class="date">2021-01-04</h4>
 
 </div>
 
@@ -501,9 +501,43 @@ library(ipumsr)
 options(scipen = 999)</code></pre>
 <pre class="r"><code># Script to prepare BLS data 
 # modified to use Illinois dataset
-source(&quot;bls-emp-il.R&quot;)
-
-# Load function ind_to_bls() to recode IPUMS ind codes to BLS ones we&#39;re using
+source(&quot;bls-emp-il.R&quot;)</code></pre>
+<pre><code>## $status
+## [1] &quot;REQUEST_SUCCEEDED&quot;
+## 
+## $responseTime
+## [1] 312
+## 
+## $message
+## list()
+## 
+## $Results
+## $Results$series
+##                seriesID
+## 1  SMU17000001500000001
+## 2  SMU17000002000000001
+## 3  SMU17000003000000001
+## 4  SMU17000004000000001
+## 5  SMU17000005000000001
+## 6  SMU17000005500000001
+## 7  SMU17000006000000001
+## 8  SMU17000006500000001
+## 9  SMU17000007000000001
+## 10 SMU17000008000000001
+## 11 SMU17000009000000001
+##                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           data
+## 1                         2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, M12, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, November, October, September, August, July, June, May, April, March, February, January, December, November, October, September, August, July, June, May, April, March, February, January, true, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 229.6, 236.3, 232.3, 236.6, 236.7, 235.3, 225.4, 202.6, 211.9, 205.3, 206.1, 221.9, 235.7, 248.4, 250.3, 252.0, 251.6, 249.2, 242.8, 232.7, 218.1, 206.7, 209.4, P, Preliminary
+## 2                         2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, M12, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, November, October, September, August, July, June, May, April, March, February, January, December, November, October, September, August, July, June, May, April, March, February, January, true, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 222.6, 229.3, 225.3, 229.5, 229.7, 228.2, 217.6, 195.4, 204.2, 197.8, 198.5, 213.9, 227.4, 240.1, 241.9, 243.7, 243.2, 240.8, 234.1, 224.1, 210.1, 198.9, 201.6, P, Preliminary
+## 3                         2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, M12, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, November, October, September, August, July, June, May, April, March, February, January, December, November, October, September, August, July, June, May, April, March, February, January, true, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 552.9, 554.6, 555.8, 559.9, 554.2, 561.4, 537.2, 523.4, 571.6, 573.3, 572.4, 579.7, 580.6, 580.3, 582.5, 586.3, 588.4, 590.1, 587.4, 586.9, 588.8, 588.7, 586.7, P, Preliminary
+## 4  2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, M12, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, November, October, September, August, July, June, May, April, March, February, January, December, November, October, September, August, July, June, May, April, March, February, January, true, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 1189.2, 1166.1, 1154.4, 1153.5, 1145.8, 1140.9, 1101.6, 1091.1, 1178.8, 1183.5, 1198.8, 1236.3, 1224.5, 1206.7, 1198.8, 1205.3, 1205.2, 1209.3, 1200.8, 1193.8, 1189.3, 1186.0, 1203.3, P, Preliminary
+## 5                                                2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, M12, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, November, October, September, August, July, June, May, April, March, February, January, December, November, October, September, August, July, June, May, April, March, February, January, true, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 87.0, 87.2, 88.0, 86.6, 87.8, 89.4, 88.5, 88.8, 95.1, 96.0, 95.3, 96.7, 95.2, 96.6, 94.5, 95.9, 94.6, 95.3, 95.0, 95.0, 95.5, 95.4, 95.2, P, Preliminary
+## 6                         2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, M12, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, November, October, September, August, July, June, May, April, March, February, January, December, November, October, September, August, July, June, May, April, March, February, January, true, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 402.7, 404.2, 403.1, 405.1, 405.7, 403.3, 400.9, 400.0, 408.5, 409.6, 408.5, 413.5, 412.9, 412.8, 411.8, 417.0, 416.6, 414.8, 409.7, 409.4, 406.3, 405.3, 403.2, P, Preliminary
+## 7                         2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, M12, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, November, October, September, August, July, June, May, April, March, February, January, December, November, October, September, August, July, June, May, April, March, February, January, true, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 897.6, 893.9, 875.5, 891.0, 879.5, 870.1, 852.0, 833.3, 895.4, 910.4, 907.1, 935.8, 952.6, 959.6, 956.1, 965.3, 959.9, 958.2, 945.6, 936.5, 924.2, 925.0, 919.2, P, Preliminary
+## 8                         2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, M12, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, November, October, September, August, July, June, May, April, March, February, January, December, November, October, September, August, July, June, May, April, March, February, January, true, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 898.6, 897.5, 887.3, 882.6, 875.7, 872.2, 860.5, 865.6, 951.0, 955.8, 946.3, 954.4, 955.8, 954.1, 937.2, 927.7, 925.0, 931.1, 942.0, 941.9, 940.3, 934.9, 928.7, P, Preliminary
+## 9                         2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, M12, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, November, October, September, August, July, June, May, April, March, February, January, December, November, October, September, August, July, June, May, April, March, February, January, true, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 456.4, 496.5, 496.8, 503.2, 491.8, 421.6, 349.7, 302.7, 574.3, 592.6, 593.3, 609.4, 608.3, 623.0, 627.6, 649.0, 650.7, 651.6, 637.3, 618.4, 600.4, 588.1, 588.9, P, Preliminary
+## 10                        2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, M12, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, November, October, September, August, July, June, May, April, March, February, January, December, November, October, September, August, July, June, May, April, March, February, January, true, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 240.6, 240.6, 240.2, 239.5, 236.9, 235.6, 211.0, 206.4, 253.7, 255.5, 255.5, 256.7, 254.7, 254.8, 253.8, 256.5, 258.1, 259.0, 257.3, 255.4, 254.1, 252.0, 252.2, P, Preliminary
+## 11                        2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2019, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, M12, M11, M10, M09, M08, M07, M06, M05, M04, M03, M02, M01, November, October, September, August, July, June, May, April, March, February, January, December, November, October, September, August, July, June, May, April, March, February, January, true, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 797.7, 798.6, 800.5, 765.7, 733.9, 755.6, 789.9, 802.8, 845.1, 836.3, 815.3, 845.7, 849.0, 842.6, 836.5, 788.2, 784.8, 825.2, 840.3, 832.1, 831.7, 823.8, 804.6, P, Preliminary</code></pre>
+<pre class="r"><code># Load function ind_to_bls() to recode IPUMS ind codes to BLS ones we&#39;re using
 source(&quot;R/ind_to_bls.R&quot;)
 
 # Script to prepare renter adjustment factor
@@ -513,7 +547,7 @@ source(&quot;renter_unemp_adj.R&quot;)</code></pre>
 ## cite the data appropriately. Use command `ipums_conditions()` for more details.</code></pre>
 <div id="bls-unemployment-data" class="section level3">
 <h3>BLS Unemployment Data</h3>
-<p>We get data from the US Bureau of Labor Statistics (BLS) Current Employment Statistics (CES) state/metro database for all of Illinois by industry group. In general renters experience higher unemployment rates than homeowners, even within the same industry, and since we are focusing on renters in this analysis we need to adjust for this difference. To achieve this we calculate renter adjustment factors by industry for the unemployment rates in NY and apply those to the BLS CES data to arrive at our final numbers for the percent of job loss by industry between September 2019 and September 2020.</p>
+<p>We get data from the US Bureau of Labor Statistics (BLS) Current Employment Statistics (CES) state/metro database for all of Illinois by industry group. In general renters experience higher unemployment rates than homeowners, even within the same industry, and since we are focusing on renters in this analysis we need to adjust for this difference. To achieve this we calculate renter adjustment factors by industry for the unemployment rates in NY and apply those to the BLS CES data to arrive at our final numbers for the percent of job loss by industry between November 2019 and November 2020.</p>
 <pre class="r"><code>renter_unemp_data &lt;- read_rds(path(&quot;data&quot;, &quot;unemp_renter_adj.rds&quot;))
 
 bls_ind_job_loss &lt;- read_rds(&quot;data/bls_emp_il.rds&quot;) %&gt;% 
@@ -522,8 +556,8 @@ bls_ind_job_loss &lt;- read_rds(&quot;data/bls_emp_il.rds&quot;) %&gt;%
   transmute(
     ind_group_bls,
     bls_ind_name,
-    emp_2019_09,
-    emp_2020_09,
+    emp_2019_11,
+    emp_2020_11,
     unemp_renter_adj,
     # Mining and construction had a slightly positive change in unemployment
     # (&lt;1%) (because we&#39;re comparing Feb to Aug and using non-seasonally
@@ -539,8 +573,8 @@ bls_ind_job_loss &lt;- read_rds(&quot;data/bls_emp_il.rds&quot;) %&gt;%
 gt(bls_ind_job_loss) %&gt;% 
   cols_label(
     bls_ind_name = &quot;Industry&quot;,
-    emp_2019_09 = md(&quot;Employed Persons &lt;br&gt;(September, 2019)&quot;),
-    emp_2020_09 = md(&quot;Employed Persons &lt;br&gt;(September, 2020)&quot;),
+    emp_2019_11 = md(&quot;Employed Persons &lt;br&gt;(November, 2019)&quot;),
+    emp_2020_11 = md(&quot;Employed Persons &lt;br&gt;(November, 2020)&quot;),
     unemp_renter_adj = &quot;Renter Adjustment&quot;,
     job_loss_pct_unadj = &quot;Renter Job Loss Percent (unadjusted)&quot;,
     job_loss_pct = &quot;Renter Job Loss Percent (adjusted)&quot;
@@ -552,7 +586,7 @@ gt(bls_ind_job_loss) %&gt;%
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
-#seltgpdfvw .gt_table {
+#chjprsoraj .gt_table {
   display: table;
   border-collapse: collapse;
   margin-left: auto;
@@ -577,7 +611,7 @@ gt(bls_ind_job_loss) %&gt;%
   border-left-color: #D3D3D3;
 }
 
-#seltgpdfvw .gt_heading {
+#chjprsoraj .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -589,7 +623,7 @@ gt(bls_ind_job_loss) %&gt;%
   border-right-color: #D3D3D3;
 }
 
-#seltgpdfvw .gt_title {
+#chjprsoraj .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -599,7 +633,7 @@ gt(bls_ind_job_loss) %&gt;%
   border-bottom-width: 0;
 }
 
-#seltgpdfvw .gt_subtitle {
+#chjprsoraj .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -609,13 +643,13 @@ gt(bls_ind_job_loss) %&gt;%
   border-top-width: 0;
 }
 
-#seltgpdfvw .gt_bottom_border {
+#chjprsoraj .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#seltgpdfvw .gt_col_headings {
+#chjprsoraj .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -630,7 +664,7 @@ gt(bls_ind_job_loss) %&gt;%
   border-right-color: #D3D3D3;
 }
 
-#seltgpdfvw .gt_col_heading {
+#chjprsoraj .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -650,7 +684,7 @@ gt(bls_ind_job_loss) %&gt;%
   overflow-x: hidden;
 }
 
-#seltgpdfvw .gt_column_spanner_outer {
+#chjprsoraj .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -662,15 +696,15 @@ gt(bls_ind_job_loss) %&gt;%
   padding-right: 4px;
 }
 
-#seltgpdfvw .gt_column_spanner_outer:first-child {
+#chjprsoraj .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#seltgpdfvw .gt_column_spanner_outer:last-child {
+#chjprsoraj .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#seltgpdfvw .gt_column_spanner {
+#chjprsoraj .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -682,7 +716,7 @@ gt(bls_ind_job_loss) %&gt;%
   width: 100%;
 }
 
-#seltgpdfvw .gt_group_heading {
+#chjprsoraj .gt_group_heading {
   padding: 8px;
   color: #333333;
   background-color: #FFFFFF;
@@ -704,7 +738,7 @@ gt(bls_ind_job_loss) %&gt;%
   vertical-align: middle;
 }
 
-#seltgpdfvw .gt_empty_group_heading {
+#chjprsoraj .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -719,15 +753,15 @@ gt(bls_ind_job_loss) %&gt;%
   vertical-align: middle;
 }
 
-#seltgpdfvw .gt_from_md > :first-child {
+#chjprsoraj .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#seltgpdfvw .gt_from_md > :last-child {
+#chjprsoraj .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#seltgpdfvw .gt_row {
+#chjprsoraj .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -746,7 +780,7 @@ gt(bls_ind_job_loss) %&gt;%
   overflow-x: hidden;
 }
 
-#seltgpdfvw .gt_stub {
+#chjprsoraj .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -758,7 +792,7 @@ gt(bls_ind_job_loss) %&gt;%
   padding-left: 12px;
 }
 
-#seltgpdfvw .gt_summary_row {
+#chjprsoraj .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -768,7 +802,7 @@ gt(bls_ind_job_loss) %&gt;%
   padding-right: 5px;
 }
 
-#seltgpdfvw .gt_first_summary_row {
+#chjprsoraj .gt_first_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -778,7 +812,7 @@ gt(bls_ind_job_loss) %&gt;%
   border-top-color: #D3D3D3;
 }
 
-#seltgpdfvw .gt_grand_summary_row {
+#chjprsoraj .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -788,7 +822,7 @@ gt(bls_ind_job_loss) %&gt;%
   padding-right: 5px;
 }
 
-#seltgpdfvw .gt_first_grand_summary_row {
+#chjprsoraj .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -798,11 +832,11 @@ gt(bls_ind_job_loss) %&gt;%
   border-top-color: #D3D3D3;
 }
 
-#seltgpdfvw .gt_striped {
+#chjprsoraj .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#seltgpdfvw .gt_table_body {
+#chjprsoraj .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -811,7 +845,7 @@ gt(bls_ind_job_loss) %&gt;%
   border-bottom-color: #D3D3D3;
 }
 
-#seltgpdfvw .gt_footnotes {
+#chjprsoraj .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -825,13 +859,13 @@ gt(bls_ind_job_loss) %&gt;%
   border-right-color: #D3D3D3;
 }
 
-#seltgpdfvw .gt_footnote {
+#chjprsoraj .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding: 4px;
 }
 
-#seltgpdfvw .gt_sourcenotes {
+#chjprsoraj .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -845,53 +879,53 @@ gt(bls_ind_job_loss) %&gt;%
   border-right-color: #D3D3D3;
 }
 
-#seltgpdfvw .gt_sourcenote {
+#chjprsoraj .gt_sourcenote {
   font-size: 90%;
   padding: 4px;
 }
 
-#seltgpdfvw .gt_left {
+#chjprsoraj .gt_left {
   text-align: left;
 }
 
-#seltgpdfvw .gt_center {
+#chjprsoraj .gt_center {
   text-align: center;
 }
 
-#seltgpdfvw .gt_right {
+#chjprsoraj .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#seltgpdfvw .gt_font_normal {
+#chjprsoraj .gt_font_normal {
   font-weight: normal;
 }
 
-#seltgpdfvw .gt_font_bold {
+#chjprsoraj .gt_font_bold {
   font-weight: bold;
 }
 
-#seltgpdfvw .gt_font_italic {
+#chjprsoraj .gt_font_italic {
   font-style: italic;
 }
 
-#seltgpdfvw .gt_super {
+#chjprsoraj .gt_super {
   font-size: 65%;
 }
 
-#seltgpdfvw .gt_footnote_marks {
+#chjprsoraj .gt_footnote_marks {
   font-style: italic;
   font-size: 65%;
 }
 </style>
-<div id="seltgpdfvw" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;"><table class="gt_table">
+<div id="chjprsoraj" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;"><table class="gt_table">
   
   <thead class="gt_col_headings">
     <tr>
       <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1">ind_group_bls</th>
       <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1">Industry</th>
-      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">Employed Persons <br>(September, 2019)</th>
-      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">Employed Persons <br>(September, 2020)</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">Employed Persons <br>(November, 2019)</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">Employed Persons <br>(November, 2020)</th>
       <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">Renter Adjustment</th>
       <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">Renter Job Loss Percent (unadjusted)</th>
       <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">Renter Job Loss Percent (adjusted)</th>
@@ -901,101 +935,101 @@ gt(bls_ind_job_loss) %&gt;%
     <tr>
       <td class="gt_row gt_left">15000000</td>
       <td class="gt_row gt_left">Mining, Logging and Construction</td>
-      <td class="gt_row gt_right">250,300</td>
-      <td class="gt_row gt_right">231,400</td>
-      <td class="gt_row gt_right">1.77</td>
-      <td class="gt_row gt_right">7.6&percnt;</td>
-      <td class="gt_row gt_right">13.3&percnt;</td>
+      <td class="gt_row gt_right">235,700</td>
+      <td class="gt_row gt_right">229,600</td>
+      <td class="gt_row gt_right">1.44</td>
+      <td class="gt_row gt_right">2.6&percnt;</td>
+      <td class="gt_row gt_right">3.7&percnt;</td>
     </tr>
     <tr>
       <td class="gt_row gt_left">20000000</td>
       <td class="gt_row gt_left">Construction</td>
-      <td class="gt_row gt_right">241,900</td>
-      <td class="gt_row gt_right">224,400</td>
-      <td class="gt_row gt_right">1.27</td>
-      <td class="gt_row gt_right">7.2&percnt;</td>
-      <td class="gt_row gt_right">9.2&percnt;</td>
+      <td class="gt_row gt_right">227,400</td>
+      <td class="gt_row gt_right">222,600</td>
+      <td class="gt_row gt_right">1.23</td>
+      <td class="gt_row gt_right">2.1&percnt;</td>
+      <td class="gt_row gt_right">2.6&percnt;</td>
     </tr>
     <tr>
       <td class="gt_row gt_left">30000000</td>
       <td class="gt_row gt_left">Manufacturing</td>
-      <td class="gt_row gt_right">582,500</td>
-      <td class="gt_row gt_right">555,200</td>
-      <td class="gt_row gt_right">1.37</td>
-      <td class="gt_row gt_right">4.7&percnt;</td>
-      <td class="gt_row gt_right">6.4&percnt;</td>
+      <td class="gt_row gt_right">580,600</td>
+      <td class="gt_row gt_right">552,900</td>
+      <td class="gt_row gt_right">1.40</td>
+      <td class="gt_row gt_right">4.8&percnt;</td>
+      <td class="gt_row gt_right">6.7&percnt;</td>
     </tr>
     <tr>
       <td class="gt_row gt_left">40000000</td>
       <td class="gt_row gt_left">Trade, Transportation, and Utilities</td>
-      <td class="gt_row gt_right">1,198,800</td>
-      <td class="gt_row gt_right">1,155,300</td>
-      <td class="gt_row gt_right">1.31</td>
-      <td class="gt_row gt_right">3.6&percnt;</td>
-      <td class="gt_row gt_right">4.8&percnt;</td>
+      <td class="gt_row gt_right">1,224,500</td>
+      <td class="gt_row gt_right">1,189,200</td>
+      <td class="gt_row gt_right">1.34</td>
+      <td class="gt_row gt_right">2.9&percnt;</td>
+      <td class="gt_row gt_right">3.9&percnt;</td>
     </tr>
     <tr>
       <td class="gt_row gt_left">50000000</td>
       <td class="gt_row gt_left">Information</td>
-      <td class="gt_row gt_right">94,500</td>
-      <td class="gt_row gt_right">87,700</td>
-      <td class="gt_row gt_right">1.44</td>
-      <td class="gt_row gt_right">7.2&percnt;</td>
-      <td class="gt_row gt_right">10.4&percnt;</td>
+      <td class="gt_row gt_right">95,200</td>
+      <td class="gt_row gt_right">87,000</td>
+      <td class="gt_row gt_right">1.34</td>
+      <td class="gt_row gt_right">8.6&percnt;</td>
+      <td class="gt_row gt_right">11.6&percnt;</td>
     </tr>
     <tr>
       <td class="gt_row gt_left">55000000</td>
       <td class="gt_row gt_left">Financial Activities</td>
-      <td class="gt_row gt_right">411,800</td>
-      <td class="gt_row gt_right">403,100</td>
-      <td class="gt_row gt_right">1.73</td>
-      <td class="gt_row gt_right">2.1&percnt;</td>
-      <td class="gt_row gt_right">3.7&percnt;</td>
+      <td class="gt_row gt_right">412,900</td>
+      <td class="gt_row gt_right">402,700</td>
+      <td class="gt_row gt_right">1.45</td>
+      <td class="gt_row gt_right">2.5&percnt;</td>
+      <td class="gt_row gt_right">3.6&percnt;</td>
     </tr>
     <tr>
       <td class="gt_row gt_left">60000000</td>
       <td class="gt_row gt_left">Professional and Business Services</td>
-      <td class="gt_row gt_right">956,100</td>
-      <td class="gt_row gt_right">875,800</td>
-      <td class="gt_row gt_right">1.35</td>
-      <td class="gt_row gt_right">8.4&percnt;</td>
-      <td class="gt_row gt_right">11.4&percnt;</td>
+      <td class="gt_row gt_right">952,600</td>
+      <td class="gt_row gt_right">897,600</td>
+      <td class="gt_row gt_right">1.37</td>
+      <td class="gt_row gt_right">5.8&percnt;</td>
+      <td class="gt_row gt_right">7.9&percnt;</td>
     </tr>
     <tr>
       <td class="gt_row gt_left">65000000</td>
       <td class="gt_row gt_left">Education and Health Services</td>
-      <td class="gt_row gt_right">937,200</td>
-      <td class="gt_row gt_right">886,900</td>
-      <td class="gt_row gt_right">1.56</td>
-      <td class="gt_row gt_right">5.4&percnt;</td>
-      <td class="gt_row gt_right">8.4&percnt;</td>
+      <td class="gt_row gt_right">955,800</td>
+      <td class="gt_row gt_right">898,600</td>
+      <td class="gt_row gt_right">1.52</td>
+      <td class="gt_row gt_right">6.0&percnt;</td>
+      <td class="gt_row gt_right">9.1&percnt;</td>
     </tr>
     <tr>
       <td class="gt_row gt_left">70000000</td>
       <td class="gt_row gt_left">Leisure and Hospitality</td>
-      <td class="gt_row gt_right">627,600</td>
-      <td class="gt_row gt_right">495,200</td>
-      <td class="gt_row gt_right">1.02</td>
-      <td class="gt_row gt_right">21.1&percnt;</td>
-      <td class="gt_row gt_right">21.4&percnt;</td>
+      <td class="gt_row gt_right">608,300</td>
+      <td class="gt_row gt_right">456,400</td>
+      <td class="gt_row gt_right">1.09</td>
+      <td class="gt_row gt_right">25.0&percnt;</td>
+      <td class="gt_row gt_right">27.3&percnt;</td>
     </tr>
     <tr>
       <td class="gt_row gt_left">80000000</td>
       <td class="gt_row gt_left">Other Services</td>
-      <td class="gt_row gt_right">253,800</td>
-      <td class="gt_row gt_right">240,500</td>
-      <td class="gt_row gt_right">0.92</td>
-      <td class="gt_row gt_right">5.2&percnt;</td>
-      <td class="gt_row gt_right">4.8&percnt;</td>
+      <td class="gt_row gt_right">254,700</td>
+      <td class="gt_row gt_right">240,600</td>
+      <td class="gt_row gt_right">1.38</td>
+      <td class="gt_row gt_right">5.5&percnt;</td>
+      <td class="gt_row gt_right">7.6&percnt;</td>
     </tr>
     <tr>
       <td class="gt_row gt_left">90000000</td>
       <td class="gt_row gt_left">Government</td>
-      <td class="gt_row gt_right">836,500</td>
-      <td class="gt_row gt_right">800,700</td>
-      <td class="gt_row gt_right">1.79</td>
-      <td class="gt_row gt_right">4.3&percnt;</td>
-      <td class="gt_row gt_right">7.7&percnt;</td>
+      <td class="gt_row gt_right">849,000</td>
+      <td class="gt_row gt_right">797,700</td>
+      <td class="gt_row gt_right">1.59</td>
+      <td class="gt_row gt_right">6.0&percnt;</td>
+      <td class="gt_row gt_right">9.6&percnt;</td>
     </tr>
   </tbody>
   
@@ -1020,13 +1054,13 @@ gt(bls_ind_job_loss) %&gt;%
 ipums_raw &lt;- read_ipums_ddi(&quot;data/usa_00002.xml&quot;) %&gt;%
   read_ipums_micro(verbose = FALSE, var_attrs = NULL) %&gt;%
   rename_with(str_to_lower) %&gt;%
-  filter(sample == 201801, statefip == 17)
+  filter(sample == 201803, statefip == 17)
 
 # it is necessary to run R&#39;s garbage collection after loading the IPUMS data
 gc()</code></pre>
 <pre><code>##             used  (Mb) gc trigger   (Mb)  max used   (Mb)
-## Ncells   2359851 126.1    4446167  237.5   4446167  237.5
-## Vcells 103608208 790.5  623929063 4760.3 702088953 5356.6</code></pre>
+## Ncells   2609791 139.4    4448648  237.6   4448648  237.6
+## Vcells 122528877 934.9  622276766 4747.6 720062225 5493.7</code></pre>
 </div>
 <div id="prepare-data" class="section level3">
 <h3>Prepare Data</h3>

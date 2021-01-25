@@ -28,6 +28,7 @@ bls_series_info <- tibble(
   prefix = "SM", # State/Metro Data
   sa = "U", # Not Seasonally Adjusted
   state = "17", # IL
+  # area = "14010", # Bloomington, IL MSA
   area = "00000", # all of IL
   data_type = "01", # All Employees, In Thousands,
 ) %>% 
@@ -42,7 +43,7 @@ bls_api_info <- list(
 )
 
 # Send the api request and parse the json response
-bls_resp <- blsAPI(bls_api_info) %>% fromJSON()
+bls_resp <- blsAPI(bls_api_info) %>% fromJSON() %>% print()
 
 # Take take all the individual datasets of results and join them back with their
 # series code and stack the results, keeping only the columns we need
@@ -66,11 +67,11 @@ bls_emp_long <- map2_dfr(
 # with the full series code components, then calculate the percent job loss by
 # industry
 bls_emp_clean <-  bls_emp_long %>% 
-  filter(month %in% c("09")) %>%  # sept 2019 vs sept 2020
+  filter(month %in% c("11")) %>%  # sept 2019 vs sept 2020
   unite(year_month, year, month) %>% 
   pivot_wider(values_from = value, names_from = year_month, names_prefix = "emp_") %>% 
   left_join(bls_series_info, by = "series_code") %>% 
-  mutate(unemp_chg_pct = (emp_2020_09 - emp_2019_09) / emp_2019_09) %>% 
+  mutate(unemp_chg_pct = (emp_2020_11 - emp_2019_11) / emp_2019_11) %>% 
   select(
     series_code,
     prefix,
@@ -80,8 +81,8 @@ bls_emp_clean <-  bls_emp_long %>%
     supersector_industry,
     data_type,
     bls_ind_name,
-    emp_2019_09,
-    emp_2020_09,
+    emp_2019_11,
+    emp_2020_11,
     unemp_chg_pct
   )
 
