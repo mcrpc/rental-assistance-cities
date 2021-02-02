@@ -6,6 +6,6 @@ The analysis presented here is adapted from the analysis presented by NYU Furman
 
 --- 
 
-[Details on data preparation](https://mrcpc.github.io/rental-assistance-counties/prep-data.html) 
+[Details on data preparation](https://github.com/mcrpc/rental-assistance-mclean/prep-data.html) 
 
-[Details on analysis and results](https://mcrpc.github.io/rental-assistance-counties/analysis_moe-no_rep-100.html)
+[Details on analysis and results](https://github.com/mcrpc/rental-assistance-mclean/analysis_moe-no_rep-100.html)
