@@ -19,7 +19,7 @@ The analysis presented here is based on an analysis by NYU Furman Center which a
 knitr::opts_chunk$set(
 	echo = TRUE,
 	message = FALSE,
-	warning = TRUE
+	warning = FALSE
 )
 ```
 
@@ -36,6 +36,7 @@ pkgs <- c(
   "knitr",
   "furrr",
   "gt",
+  "systemfonts",
   "fs",
   "lemon"
 )
