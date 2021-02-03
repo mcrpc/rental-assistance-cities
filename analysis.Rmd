@@ -1,6 +1,6 @@
 ---
 title: "Covid Rental Assistance Need"
-subtitle: "NYU Furman Center"
+subtitle: "McLean County Regional Planning Commission"
 date: "`r Sys.Date()`"
 output:
   html_document:
@@ -10,18 +10,16 @@ params:
   iterations: 2
 ---
 
-The analysis presented here appears in this blog post:
+The analysis presented here is based on an analysis by NYU Furman Center which appears in this blog post:
 
 [Rental Assistance Need in Five of New York’s Mid-Sized Cities](https://furmancenter.org/thestoop/entry/rental-assistance-need-in-five-of-new-yorks-mid-sized-cities)
-
-The dataset used here is [prepared separately](https://FurmanCenter.github.io/rental-assistance-cities/prep-data.html).
 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
 	echo = TRUE,
 	message = FALSE,
-	warning = FALSE
+	warning = TRUE
 )
 ```
 
@@ -139,7 +137,7 @@ county_order <- c(
 # a single margin of error column.
 add_moe <- function(.data) {
   .data %>%
-  pivot_longer(is.numeric) %>% 
+  pivot_longer(where(is.numeric)) %>% 
   mutate(
     value_type = case_when(
       str_detect(name, "_low") ~ "low",
@@ -174,7 +172,7 @@ HIDE_MOE <- as.logical(params$hide_moe)
 # cols_label(.list = hide_cls_list(.data))
 hide_cols_list <- function(.data) {
   .data %>% 
-  select(is.numeric) %>% 
+  select(where(is.numeric)) %>% 
   names() %>% 
   {set_names(rep("", length(.)), .)} %>% 
   as.list()

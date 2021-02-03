@@ -9,13 +9,13 @@ source(path("R", "ind_to_bls.R"))
 
 
 # Read in IPUMS USA ACS microdata, standardize the column names
-ipums_raw <- read_ipums_ddi("data/usa_00002.xml") %>%
-  read_ipums_micro() %>%
-  rename_with(str_to_lower) %>%
-  filter(sample == 201803, statefip == 17)
+ipums_raw <- read_csv("data/ipums_acs-2018-5yr_il.csv.gz") %>% #CHANGETHIS when using new IPUMS data
+  rename_with(str_to_lower)
 
-# it is necessary to run R's garbage collection after loading the IPUMS data
-gc()
+# it may be necessary to run R's garbage collection after loading the IPUMS data
+# especially if you experiment with more variables or multiple samples
+# if you encounter errors related to memory usage, uncomment the following line
+# gc()
 
 # Add column with BLS industry categories, filter to relevant universe, set up
 # survey weights
