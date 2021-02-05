@@ -59,8 +59,8 @@ bls_ind_job_loss <- read_rds("data/bls_emp_il.rds") %>%
   transmute(
     ind_group_bls,
     bls_ind_name,
-    emp_2019_11, #CHANGETHIS when using a different month/year of BLS data
-    emp_2020_11, #CHANGETHIS when using a different month/year of BLS data
+    emp_2019_12, #CHANGETHIS when using a different month/year of BLS data
+    emp_2020_12, #CHANGETHIS when using a different month/year of BLS data
     unemp_renter_adj,
     # Mining and construction had a slightly positive change in unemployment
     # (<1%) (because we're comparing Feb to Aug and using non-seasonally
@@ -76,8 +76,8 @@ bls_ind_job_loss <- read_rds("data/bls_emp_il.rds") %>%
 gt(bls_ind_job_loss) %>% 
   cols_label(
     bls_ind_name = "Industry",
-    emp_2019_11 = md("Employed Persons <br>(November, 2019)"), #CHANGETHIS when using a different month/year of BLS data
-    emp_2020_11 = md("Employed Persons <br>(November, 2020)"), #CHANGETHIS when using a different month/year of BLS data
+    emp_2019_12 = md("Employed Persons <br>(December, 2019)"), #CHANGETHIS when using a different month/year of BLS data
+    emp_2020_12 = md("Employed Persons <br>(December, 2020)"), #CHANGETHIS when using a different month/year of BLS data
     unemp_renter_adj = "Renter Adjustment",
     job_loss_pct_unadj = "Renter Job Loss Percent (unadjusted)",
     job_loss_pct = "Renter Job Loss Percent (adjusted)"

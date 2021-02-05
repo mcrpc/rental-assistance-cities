@@ -27,7 +27,7 @@ The code behind this analysis *should* work just fine for the foreseeable future
 ### Modifying the analysis
 
 Making changes to the format and methods of this analysis will require a significant background in R. Whether you are a beginner who is interested in getting started with R or an R user who is unfamiliar with the `tidyverse`, the free guide [R for Data Science](https://r4ds.had.co.nz/) is an excellent place to start. When in doubt, always start small and constantly re-run the code to check your outputs.
-
+Add a sentence here.
 --- 
 
 [Details on data preparation](https://mcrpc.github.io/rental-assistance-mclean/docs/prep-data.html) 

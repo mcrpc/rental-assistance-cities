@@ -67,11 +67,11 @@ bls_emp_long <- map2_dfr(
 # with the full series code components, then calculate the percent job loss by
 # industry
 bls_emp_clean <-  bls_emp_long %>% 
-  filter(month %in% c("11")) %>%  #CHANGETHIS when using a different month/year of BLS data
+  filter(month %in% c("12")) %>%  #CHANGETHIS when using a different month/year of BLS data
   unite(year_month, year, month) %>% 
   pivot_wider(values_from = value, names_from = year_month, names_prefix = "emp_") %>% 
   left_join(bls_series_info, by = "series_code") %>% 
-  mutate(unemp_chg_pct = (emp_2020_11 - emp_2019_11) / emp_2019_11) %>% #CHANGETHIS when using a different month/year of BLS data
+  mutate(unemp_chg_pct = (emp_2020_12 - emp_2019_12) / emp_2019_12) %>% #CHANGETHIS when using a different month/year of BLS data
   select(
     series_code,
     prefix,
@@ -81,8 +81,8 @@ bls_emp_clean <-  bls_emp_long %>%
     supersector_industry,
     data_type,
     bls_ind_name,
-    emp_2019_11, #CHANGETHIS when using a different month/year of BLS data
-    emp_2020_11, #CHANGETHIS when using a different month/year of BLS data
+    emp_2019_12, #CHANGETHIS when using a different month/year of BLS data
+    emp_2020_12, #CHANGETHIS when using a different month/year of BLS data
     unemp_chg_pct
   )
 
